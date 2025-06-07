@@ -197,7 +197,7 @@
           </button>
         </div>
         <a href="/profile" class="profile-button">
-          <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" alt="Profile" class="profile-icon" />
+          <img src="https://avatars.mds.yandex.net/i?id=dfb57f6793d9a8a2575c240be885d79e_l-4538910-images-thumbs&n=13" alt="Profile" class="profile-icon" />
         </a>
       </div>
     </div>
@@ -815,21 +815,99 @@
     white-space: nowrap;
   }
 
-  @media (max-width: 1200px) {
-    .important-news-stories {
-      grid-template-columns: repeat(4, 1fr);
+  @media (max-width: 480px) {
+    .container {
+      padding: 0.1rem;
+      max-width: 100vw;
     }
-  }
-
-  @media (max-width: 900px) {
-    .important-news-stories {
-      grid-template-columns: repeat(3, 1fr);
+    .content {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
     }
-  }
-
-  @media (max-width: 600px) {
+    .sidebar {
+      order: 1;
+      width: 100%;
+      margin-bottom: 0.3rem;
+      padding: 0.2rem;
+      border-radius: 6px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    }
+    .news-feed {
+      order: 2;
+      width: 100%;
+      gap: 0.2rem;
+      margin-top: 0;
+    }
+    .important-news-section {
+      margin-bottom: 0.3rem;
+    }
     .important-news-stories {
-      grid-template-columns: repeat(2, 1fr);
+      grid-template-columns: 1fr;
+      gap: 0.15rem;
+    }
+    .important-news-story {
+      margin: 0;
+    }
+    .story-preview {
+      min-height: 22px;
+      padding: 0.1rem 0.2rem;
+      border-radius: 5px;
+      font-size: 0.7rem;
+    }
+    .story-title {
+      font-size: 0.7rem;
+      margin-bottom: 0;
+      line-height: 1.1;
+    }
+    .story-tag {
+      font-size: 0.6rem;
+      padding: 0.03rem 0.12rem;
+    }
+    .ticker-list, .source-list {
+      display: flex;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      gap: 0.1rem;
+      padding-bottom: 0.1rem;
+      scrollbar-width: none;
+    }
+    .ticker-list::-webkit-scrollbar, .source-list::-webkit-scrollbar {
+      display: none;
+    }
+    .ticker-button, .source-item {
+      font-size: 0.7rem;
+      padding: 0.12rem 0.4rem;
+      border-radius: 4px;
+      min-width: 32px;
+    }
+    .news-card {
+      width: 100%;
+      padding: 0.18rem 0.2rem;
+      border-radius: 5px;
+      font-size: 0.7rem;
+      margin-bottom: 0;
+    }
+    .news-title {
+      font-size: 0.75rem;
+      margin: 0 0 0.08rem 0;
+      line-height: 1.1;
+    }
+    .action-button {
+      font-size: 0.7rem;
+      padding: 0.12rem 0.4rem;
+      border-radius: 4px;
+      min-width: 32px;
+    }
+    .profile-section {
+      gap: 0.2rem;
+    }
+    .profile-icon {
+      width: 22px;
+      height: 22px;
+    }
+    .balance-amount {
+      font-size: 0.8rem;
     }
   }
 </style> 

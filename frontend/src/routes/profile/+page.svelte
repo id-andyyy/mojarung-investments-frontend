@@ -46,7 +46,7 @@
   <div class="profile-content">
     <div class="profile-card">
       <div class="profile-info">
-        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" alt="Profile" class="profile-avatar" />
+        <img src="https://avatars.mds.yandex.net/i?id=dfb57f6793d9a8a2575c240be885d79e_l-4538910-images-thumbs&n=13" alt="Profile" class="profile-avatar" />
         <div class="user-details">
           <h2>{userData.name}</h2>
           <p class="email">{userData.email}</p>
