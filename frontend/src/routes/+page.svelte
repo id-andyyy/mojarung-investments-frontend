@@ -8,6 +8,7 @@
   let isLoading = true;
   let error: string | null = null;
   let showBalance = true;
+  let feedMode: 'recommendations' | 'all' = 'recommendations';
 
   // Важные новости за день
   const importantNews = [
@@ -90,7 +91,8 @@
         confidence: 85,
         reasoning: 'Сильный рост прибыли и перспективные проекты указывают на потенциал роста акций'
       },
-      tags: ['нефть', 'энергетика', 'дивиденды']
+      tags: ['нефть', 'энергетика', 'дивиденды'],
+      percentageChange: 2.5
     },
     {
       id: 2,
@@ -110,7 +112,8 @@
         confidence: 75,
         reasoning: 'Инновационные продукты могут привлечь новых клиентов и увеличить доходы'
       },
-      tags: ['банки', 'финансы', 'технологии', 'инвестиции']
+      tags: ['банки', 'финансы', 'технологии', 'инвестиции'],
+      percentageChange: 1.5
     },
     {
       id: 3,
@@ -130,7 +133,8 @@
         confidence: 80,
         reasoning: 'Снижение добычи и отложенные проекты могут негативно повлиять на финансовые показатели'
       },
-      tags: ['газ', 'энергетика', 'санкции']
+      tags: ['газ', 'энергетика', 'санкции'],
+      percentageChange: -2.3
     },
     {
       id: 4,
@@ -150,7 +154,8 @@
         confidence: 65,
         reasoning: 'Новые сервисы могут принести результаты в долгосрочной перспективе'
       },
-      tags: ['технологии', 'интернет', 'B2B']
+      tags: ['технологии', 'интернет', 'B2B'],
+      percentageChange: 0.2
     }
   ];
 
@@ -226,6 +231,10 @@
 
   <div class="content">
     <aside class="sidebar">
+      <div class="feed-mode-toggle">
+        <button class:active={feedMode === 'recommendations'} on:click={() => feedMode = 'recommendations'}>Рекомендации</button>
+        <button class:active={feedMode === 'all'} on:click={() => feedMode = 'all'}>Вся лента</button>
+      </div>
       <div class="ticker-selector">
         <h3>Выберите тикеры</h3>
         <div class="ticker-list">
@@ -268,22 +277,29 @@
             <article class="news-card">
               <div class="news-header">
                 <div class="news-meta">
-                  <div class="news-tags-time">
-                    <div class="news-tags">
-                      <span class="news-tag">{news.ticker}</span>
-                      {#if news.tags && news.tags.length > 0}
-                        {#each news.tags as tag}
-                          <span class="news-tag">{tag}</span>
-                        {/each}
-                      {/if}
-                    </div>
-                    <span class="time">{new Date(news.timestamp).toLocaleTimeString()}</span>
+                  <div class="news-tags">
+                    <span class="news-tag">{news.ticker}</span>
+                    {#if news.tags && news.tags.length > 0}
+                      {#each news.tags as tag}
+                        <span class="news-tag">{tag}</span>
+                      {/each}
+                    {/if}
                   </div>
-                  <span class="sentiment" class:positive={news.sentiment === 'positive'} class:negative={news.sentiment === 'negative'}>
-                    {news.sentiment === 'positive' ? '📈' : news.sentiment === 'negative' ? '📉' : '➡️'}
-                  </span>
                 </div>
-                <span class="source">{news.source}</span>
+                <div class="news-right">
+                  <div class="source-time-sentiment">
+                    <span class="source">{news.source}</span>
+                    <span class="time">{new Date(news.timestamp).toLocaleTimeString()}</span>
+                    <span class="sentiment" class:positive={news.sentiment === 'positive'} class:negative={news.sentiment === 'negative'}>
+                      <div class="sentiment-circle"></div>
+                    </span>
+                    {#if news.percentageChange !== undefined}
+                      <span class="percentage-change" class:positive={news.percentageChange > 0} class:negative={news.percentageChange < 0}>
+                        {news.percentageChange > 0 ? '+' : ''}{news.percentageChange.toFixed(1)}%
+                      </span>
+                    {/if}
+                  </div>
+                </div>
               </div>
               
               <div class="news-content">
@@ -314,6 +330,18 @@
                 <p class="reasoning">{news.recommendation.reasoning}</p>
                 <div class="action-buttons">
                   <button class="action-button">{news.recommendation.action === 'buy' ? `Купить ${news.ticker}` : news.recommendation.action === 'sell' ? `Продать ${news.ticker}` : `Держать ${news.ticker}`}</button>
+                  <div class="news-actions">
+                    <button class="action-icon like">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path>
+                      </svg>
+                    </button>
+                    <button class="action-icon dislike">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"></path>
+                      </svg>
+                    </button>
+                  </div>
                 </div>
               </div>
             </article>
@@ -327,16 +355,30 @@
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
 
+  /* Global styles for news tags - highest priority */
+  :global(.news-tags) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
+  :global(.news-tag) {
+    font-weight: 600;
+    color: #ffdd2d !important;
+    background: rgba(255, 221, 45, 0.1) !important;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+  }
+
   :global(body) {
     background-color: #1a1a1a;
-    color: #ffffff;
     font-family: 'Inter', sans-serif;
   }
 
   .container {
     max-width: 1200px;
     margin: 0 auto;
-    padding: 2rem;
+    
   }
 
   .header {
@@ -478,7 +520,7 @@
   .ticker-button {
     padding: 0.5rem 1rem;
     border: 1px solid #333;
-    border-radius: 6px;
+    border-radius: 10px;
     background: #1a1a1a;
     color: #ffffff;
     cursor: pointer;
@@ -615,15 +657,16 @@
   }
 
   .action-buttons {
-    margin-top: 0.2rem;
+    margin-top: 0.5rem;
     display: flex;
-    justify-content: flex-start;
+    justify-content: space-between;
+    align-items: center;
   }
 
   .action-button {
-    padding: 0.5rem 1.5rem;
+    padding: 0.5rem 1rem;
     border: none;
-    border-radius: 6px;
+    border-radius: 10px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
@@ -642,39 +685,48 @@
   .news-header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
     margin-bottom: 0.5rem;
     font-size: 0.85rem;
   }
 
   .news-meta {
     display: flex;
-    align-items: center;
-    gap: 0.75rem;
+    align-items: flex-start;
   }
 
-  .news-tags-time {
+  .news-right {
     display: flex;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    margin-top: 0.1rem;
-    width: 100%;
-    gap: 0.2rem;
+    align-items: center;
   }
 
-  .news-tags {
-    flex: 1 1 auto;
-    min-width: 0;
-    flex-wrap: wrap;
+  .source-time-sentiment {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
   }
 
-  .news-tag {
+  .time {
+    font-size: 0.85rem;
+    color: #a0a0a0;
+  }
+
+  .source {
+    color: #ffffff;
+    font-weight: 500;
+  }
+
+  .percentage-change {
+    font-size: 0.85rem;
     font-weight: 600;
-    color: #ffdd2d;
-    background: rgba(255, 221, 45, 0.1);
-    padding: 0.2rem 0.5rem;
-    border-radius: 4px;
-    margin-right: 0.4rem;
+  }
+
+  .percentage-change.positive {
+    color: #4caf50; /* Green for positive change */
+  }
+
+  .percentage-change.negative {
+    color: #f44336; /* Red for negative change */
   }
 
   .news-content {
@@ -718,12 +770,19 @@
     font-size: 1rem;
   }
 
-  .sentiment.positive {
-    color: #4caf50;
+  .sentiment-circle {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background-color: #a0a0a0;
   }
 
-  .sentiment.negative {
-    color: #f44336;
+  .sentiment.positive .sentiment-circle {
+    background-color: #4caf50;
+  }
+
+  .sentiment.negative .sentiment-circle {
+    background-color: #f44336;
   }
 
   .loading {
@@ -758,7 +817,9 @@
     width: 100%;
     padding: 0.5rem 0;
   }
-
+  .source{
+    color: #ffffff;
+  }
   .important-news-story {
     display: flex;
     flex-direction: column;
@@ -818,11 +879,31 @@
 
   .story-tag {
     font-size: 0.65rem;
-    color: #e0e0e0;
-    background: rgba(160, 160, 160, 0.2);
+    color: #ffdd2d;
+    background: rgba(255, 221, 45, 0.1);
     padding: 0.1rem 0.3rem;
     border-radius: 3px;
-    white-space: nowrap;
+  }
+
+  .feed-mode-toggle {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+  .feed-mode-toggle button {
+    padding: 0.4rem 1.2rem;
+    border: 1px solid #333;
+    border-radius: 10px;
+    background: #1a1a1a;
+    color: #fff;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background 0.2s, color 0.2s, border 0.2s;
+  }
+  .feed-mode-toggle button.active {
+    background: #ffdd2d;
+    color: #1a1a1a;
+    border-color: #ffdd2d;
   }
 
   @media (max-width: 480px) {
@@ -837,7 +918,7 @@
       width: 97%;
     }
     .source{
-      opacity: 0;
+      opacity: 1;
     }
     .sidebar {
       order: 1;
@@ -878,14 +959,6 @@
       flex-direction: column;
       flex-wrap: nowrap;
     }
-    .news-tags-time {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 0.2rem;
-      margin-bottom: 0.2rem;
-      padding-bottom: 0.2rem;
-    }
     .news-tags {
       display: flex;
       flex-wrap: nowrap;
@@ -901,8 +974,6 @@
       font-size: 0.7em;
       padding: 0.08em 0.4em;
       border-radius: 3px;
-      background: #222;
-      color: #ffd600;
       font-weight: 600;
       white-space: nowrap;
     }
@@ -953,5 +1024,46 @@
     .balance-amount {
       font-size: 0.7rem;
     }
+  }
+  @media (max-width: 600px) {
+    .feed-mode-toggle {
+      gap: 0.2rem;
+      margin-bottom: 0.7rem;
+    }
+    .feed-mode-toggle button {
+      padding: 0.3rem 0.7rem;
+      font-size: 0.9rem;
+    }
+  }
+
+  .news-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .action-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1px solid #333;
+    background: #242424;
+    color: #666;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    padding: 0;
+  }
+
+  .action-icon:hover {
+    background: #2a2a2a;
+    color: #ffdd2d;
+    border-color: #ffdd2d;
+  }
+
+  .action-icon svg {
+    width: 16px;
+    height: 16px;
   }
 </style> 

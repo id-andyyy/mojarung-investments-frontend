@@ -100,6 +100,17 @@
 </script>
 
 <main class="news-detail-container">
+  <header class="header">
+    <div class="header-content">
+      <div class="header-left">
+        <a href="/" class="header-title-link">
+          <h1>TBank News Aggregator</h1>
+        </a>
+        <p class="subtitle">Агрегатор новостей для трейдеров</p>
+      </div>
+      <!-- Profile section can be added here if needed, similar to main page -->
+    </div>
+  </header>
   {#if isLoading}
     <div class="loading">Загрузка новости...</div>
   {:else if error}
@@ -182,7 +193,6 @@
 
   :global(body) {
     background-color: #1a1a1a;
-    color: #ffffff;
     font-family: 'Inter', sans-serif;
   }
 
@@ -190,6 +200,64 @@
     max-width: 98%;
     margin: 2rem auto;
     padding: 0 1rem;
+  }
+
+  .header {
+    margin-bottom: 1.5rem;
+    padding: 1rem 0;
+    border-bottom: 1px solid #333;
+  }
+
+  .header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .header-left {
+    text-align: left;
+  }
+
+  .header-title-link {
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .header-left h1 {
+    font-size: 2rem;
+    margin: 0;
+    color: #ffdd2d;
+    font-weight: 700;
+  }
+
+  .subtitle {
+    margin: 0.5rem 0 0 0;
+    color: #a0a0a0;
+    font-size: 1rem;
+  }
+
+  /* Add mobile responsiveness for header */
+  @media (max-width: 600px) {
+    .header-content {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
+    .header-left h1 {
+      font-size: 1.5rem;
+    }
+    .subtitle {
+      font-size: 0.9rem;
+    }
+  }
+
+  @media (max-width: 400px) {
+    .header-left h1 {
+      font-size: 1.3rem;
+    }
+    .subtitle {
+      font-size: 0.8rem;
+    }
   }
 
   .news-detail-card {

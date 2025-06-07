@@ -65,7 +65,6 @@
 
   :global(body) {
     background-color: #1a1a1a; /* Consistent dark background */
-    color: #ffffff; /* Consistent light text color */
     font-family: 'Inter', sans-serif; /* Consistent font */
   }
 

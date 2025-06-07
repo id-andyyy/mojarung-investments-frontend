@@ -121,6 +121,10 @@
 </main>
 
 <style>
+    :global(body) {
+    background-color: #1a1a1a;
+    font-family: 'Inter', sans-serif;
+  }
   .profile-container {
     max-width: 800px;
     margin: 2rem auto;
