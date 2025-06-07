@@ -268,18 +268,20 @@
             <article class="news-card">
               <div class="news-header">
                 <div class="news-meta">
-                  <div class="news-tags">
-                    <span class="news-tag">{news.ticker}</span>
-                    {#if news.tags && news.tags.length > 0}
-                      {#each news.tags as tag}
-                        <span class="news-tag">{tag}</span>
-                      {/each}
-                    {/if}
+                  <div class="news-tags-time">
+                    <div class="news-tags">
+                      <span class="news-tag">{news.ticker}</span>
+                      {#if news.tags && news.tags.length > 0}
+                        {#each news.tags as tag}
+                          <span class="news-tag">{tag}</span>
+                        {/each}
+                      {/if}
+                    </div>
+                    <span class="time">{new Date(news.timestamp).toLocaleTimeString()}</span>
                   </div>
                   <span class="sentiment" class:positive={news.sentiment === 'positive'} class:negative={news.sentiment === 'negative'}>
                     {news.sentiment === 'positive' ? '📈' : news.sentiment === 'negative' ? '📉' : '➡️'}
                   </span>
-                  <span class="time">{new Date(news.timestamp).toLocaleTimeString()}</span>
                 </div>
                 <span class="source">{news.source}</span>
               </div>
@@ -651,12 +653,19 @@
     gap: 0.75rem;
   }
 
-  .news-tags {
+  .news-tags-time {
     display: flex;
-    flex-wrap: nowrap;
-    gap: 0.4rem;
-    overflow-x: auto;
-    padding-bottom: 0.2rem;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    margin-top: 0.1rem;
+    width: 100%;
+    gap: 0.2rem;
+  }
+
+  .news-tags {
+    flex: 1 1 auto;
+    min-width: 0;
+    flex-wrap: wrap;
   }
 
   .news-tag {
@@ -665,6 +674,7 @@
     background: rgba(255, 221, 45, 0.1);
     padding: 0.2rem 0.5rem;
     border-radius: 4px;
+    margin-right: 0.4rem;
   }
 
   .news-content {
@@ -824,10 +834,14 @@
       display: flex;
       flex-direction: column;
       gap: 0.3rem;
+      width: 97%;
+    }
+    .source{
+      opacity: 0;
     }
     .sidebar {
       order: 1;
-      width: 100%;
+      width: 98%;
       margin-bottom: 0.3rem;
       padding: 0.2rem;
       border-radius: 6px;
@@ -836,33 +850,70 @@
     .news-feed {
       order: 2;
       width: 100%;
-      gap: 0.2rem;
+      gap: 0.5rem;
       margin-top: 0;
     }
     .important-news-section {
       margin-bottom: 0.3rem;
     }
     .important-news-stories {
-      grid-template-columns: 1fr;
-      gap: 0.15rem;
+      grid-template-columns: 1fr 1fr;
+      column-gap: 0.3rem;
+      row-gap: 0.5rem;
     }
     .important-news-story {
       margin: 0;
+      width: 90%;
     }
     .story-preview {
-      min-height: 22px;
+      min-height: 20px;
       padding: 0.1rem 0.2rem;
       border-radius: 5px;
       font-size: 0.7rem;
     }
-    .story-title {
-      font-size: 0.7rem;
-      margin-bottom: 0;
-      line-height: 1.1;
+    .news-card {
+      margin-bottom: 0.5rem;
     }
-    .story-tag {
-      font-size: 0.6rem;
-      padding: 0.03rem 0.12rem;
+    .news-header {
+      flex-direction: column;
+      flex-wrap: nowrap;
+    }
+    .news-tags-time {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.2rem;
+      margin-bottom: 0.2rem;
+      padding-bottom: 0.2rem;
+    }
+    .news-tags {
+      display: flex;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      gap: 0.12rem;
+      padding-bottom: 0;
+      scrollbar-width: none;
+    }
+    .news-tags::-webkit-scrollbar {
+      display: none;
+    }
+    .news-tag {
+      font-size: 0.7em;
+      padding: 0.08em 0.4em;
+      border-radius: 3px;
+      background: #222;
+      color: #ffd600;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .time {
+      font-size: 0.75em;
+      color: #a0a0a0;
+      margin-top: 0.1rem;
+      margin-left: 0.5rem;
+      flex-shrink: 0;
+      min-width: 48px;
+      text-align: right;
     }
     .ticker-list, .source-list {
       display: flex;
@@ -881,15 +932,8 @@
       border-radius: 4px;
       min-width: 32px;
     }
-    .news-card {
-      width: 100%;
-      padding: 0.18rem 0.2rem;
-      border-radius: 5px;
-      font-size: 0.7rem;
-      margin-bottom: 0;
-    }
     .news-title {
-      font-size: 0.75rem;
+      font-size: 0.9rem;
       margin: 0 0 0.08rem 0;
       line-height: 1.1;
     }
@@ -907,7 +951,7 @@
       height: 22px;
     }
     .balance-amount {
-      font-size: 0.8rem;
+      font-size: 0.7rem;
     }
   }
 </style> 
