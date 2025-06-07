@@ -7,6 +7,7 @@
   let newsItems: any[] = [];
   let isLoading = true;
   let error: string | null = null;
+  let showBalance = true;
 
   // Важные новости за день
   const importantNews = [
@@ -180,7 +181,20 @@
       <div class="profile-section">
         <div class="balance">
           <span class="balance-label">Баланс:</span>
-          <span class="balance-amount">₽ 1,234,567</span>
+          <span class="balance-amount">
+            {#if showBalance}
+              ₽ 1,234,567
+            {:else}
+              <span class="balance-stars">***</span>
+            {/if}
+          </span>
+          <button class="balance-eye" on:click={() => showBalance = !showBalance} aria-label="Показать/скрыть баланс">
+            {#if showBalance}
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1.5 12s3.5-7 10.5-7 10.5 7 10.5 7-3.5 7-10.5 7S1.5 12 1.5 12z"/><circle cx="12" cy="12" r="3.5"/></svg>
+            {:else}
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.94 17.94A10.06 10.06 0 0112 19.5c-7 0-10.5-7.5-10.5-7.5a20.3 20.3 0 014.21-5.3M6.06 6.06A10.06 10.06 0 0112 4.5c7 0 10.5 7.5 10.5 7.5a20.3 20.3 0 01-4.21 5.3M1 1l22 22"/></svg>
+            {/if}
+          </button>
         </div>
         <a href="/profile" class="profile-button">
           <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" alt="Profile" class="profile-icon" />
@@ -254,14 +268,14 @@
             <article class="news-card">
               <div class="news-header">
                 <div class="news-meta">
-                  <span class="ticker">{news.ticker}</span>
-                  {#if news.tags && news.tags.length > 0}
-                    <div class="news-tags">
+                  <div class="news-tags">
+                    <span class="news-tag">{news.ticker}</span>
+                    {#if news.tags && news.tags.length > 0}
                       {#each news.tags as tag}
                         <span class="news-tag">{tag}</span>
                       {/each}
-                    </div>
-                  {/if}
+                    {/if}
+                  </div>
                   <span class="sentiment" class:positive={news.sentiment === 'positive'} class:negative={news.sentiment === 'negative'}>
                     {news.sentiment === 'positive' ? '📈' : news.sentiment === 'negative' ? '📉' : '➡️'}
                   </span>
@@ -362,6 +376,7 @@
     display: flex;
     flex-direction: column;
     align-items: flex-end;
+    position: relative;
   }
 
   .balance-label {
@@ -372,6 +387,32 @@
   .balance-amount {
     font-size: 1.3rem;
     font-weight: 600;
+    color: #ffdd2d;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+  }
+
+  .balance-stars {
+    color: #ffdd2d;
+    font-size: 1.3rem;
+    letter-spacing: 0.2em;
+    font-weight: 600;
+  }
+
+  .balance-eye {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.2rem;
+    margin-left: 0.3rem;
+    color: #a0a0a0;
+    transition: color 0.2s;
+    vertical-align: middle;
+    padding: 0;
+  }
+
+  .balance-eye:hover {
     color: #ffdd2d;
   }
 
@@ -406,6 +447,7 @@
     display: grid;
     grid-template-columns: 300px 1fr;
     gap: 2rem;
+    align-items: start;
   }
 
   .sidebar {
@@ -609,29 +651,10 @@
     gap: 0.75rem;
   }
 
-  .ticker {
-    font-weight: 600;
-    color: #ffdd2d;
-    background: rgba(255, 221, 45, 0.1);
-    padding: 0.2rem 0.5rem;
-    border-radius: 4px;
-  }
-
-  .source {
-    color: #a0a0a0;
-    font-size: 0.8rem;
-  }
-
-  .time {
-    color: #666;
-    font-size: 0.8rem;
-  }
-
   .news-tags {
     display: flex;
     flex-wrap: nowrap;
     gap: 0.4rem;
-    margin-left: 0.5rem;
     overflow-x: auto;
     padding-bottom: 0.2rem;
   }
