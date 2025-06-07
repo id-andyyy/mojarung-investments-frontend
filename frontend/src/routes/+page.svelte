@@ -7,7 +7,67 @@
   let newsItems: any[] = [];
   let isLoading = true;
   let error: string | null = null;
-  let activeTab: 'morning' | 'live' = 'morning';
+
+  // Важные новости за день
+  const importantNews = [
+    {
+      id: 101,
+      title: 'ЦБ РФ повысил ключевую ставку до 16%',
+      impact: 'high',
+      ticker: 'SBER',
+      tags: ['монетарная политика', 'процентные ставки']
+    },
+    {
+      id: 102,
+      title: 'Минфин объявил о выпуске ОФЗ с доходностью 15%',
+      impact: 'high',
+      ticker: 'OFZ',
+      tags: ['облигации', 'госдолг']
+    },
+    {
+      id: 103,
+      title: 'Роснефть подписала контракт на поставку нефти в Индию',
+      impact: 'medium',
+      ticker: 'ROSN',
+      tags: ['нефть', 'экспорт']
+    },
+    {
+      id: 104,
+      title: 'Сбербанк запускает новую программу лояльности',
+      impact: 'medium',
+      ticker: 'SBER',
+      tags: ['банки', 'розничный бизнес']
+    },
+    {
+      id: 105,
+      title: 'Яндекс представил новый сервис для бизнеса',
+      impact: 'medium',
+      ticker: 'YNDX',
+      tags: ['технологии', 'B2B']
+    },
+    {
+      id: 106,
+      title: 'Газпром увеличивает поставки в Китай',
+      impact: 'high',
+      ticker: 'GAZP',
+      tags: ['газ', 'экспорт']
+    },
+    {
+      id: 107,
+      title: 'Тинькофф запускает платформу для инвестиций в стартапы',
+      impact: 'medium',
+      ticker: 'TCSG',
+      tags: ['финтех', 'стартапы', 'инвестиции']
+    }
+  ];
+
+  // Показывать всегда 7 карточек (седьмая всегда заполнена)
+  $: visibleStories = [
+    ...importantNews.slice(0, 6),
+    importantNews[6]
+      ? importantNews[6]
+      : { title: 'Нет важных новостей', tags: [], ticker: '' }
+  ];
 
   // Моковые данные для демонстрации
   const mockNews = [
@@ -112,25 +172,42 @@
 
 <main class="container">
   <header class="header">
-    <h1>TBank News Aggregator</h1>
-    <p class="subtitle">Агрегатор новостей для трейдеров</p>
+    <div class="header-content">
+      <div class="header-left">
+        <h1>TBank News Aggregator</h1>
+        <p class="subtitle">Агрегатор новостей для трейдеров</p>
+      </div>
+      <div class="profile-section">
+        <div class="balance">
+          <span class="balance-label">Баланс:</span>
+          <span class="balance-amount">₽ 1,234,567</span>
+        </div>
+        <a href="/profile" class="profile-button">
+          <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" alt="Profile" class="profile-icon" />
+        </a>
+      </div>
+    </div>
   </header>
 
-  <div class="tabs">
-    <button 
-      class="tab-button" 
-      class:active={activeTab === 'morning'}
-      on:click={() => activeTab = 'morning'}
-    >
-      Утренний дайджест
-    </button>
-    <button 
-      class="tab-button" 
-      class:active={activeTab === 'live'}
-      on:click={() => activeTab = 'live'}
-    >
-      Живая лента
-    </button>
+  <div class="important-news-section">
+    <h2>Важные новости за день</h2>
+    <div class="important-news-stories">
+      {#each visibleStories as news}
+        <div class="important-news-story">
+          <div class="story-preview">
+            <div class="story-preview-content">
+              <h3 class="story-title">{news.title}</h3>
+              <div class="story-tags">
+                {#if news.ticker}<span class="story-tag">{news.ticker}</span>{/if}
+                {#each news.tags as tag}
+                  <span class="story-tag">{tag}</span>
+                {/each}
+              </div>
+            </div>
+          </div>
+        </div>
+      {/each}
+    </div>
   </div>
 
   <div class="content">
@@ -173,56 +250,58 @@
         <div class="error">{error}</div>
       {:else}
         {#each newsItems as news}
-          <article class="news-card">
-            <div class="news-header">
-              <div class="news-meta">
-                <span class="ticker">{news.ticker}</span>
-                {#if news.tags && news.tags.length > 0}
-                  <div class="news-tags">
-                    {#each news.tags as tag}
-                      <span class="news-tag">{tag}</span>
-                    {/each}
-                  </div>
-                {/if}
-                <span class="sentiment" class:positive={news.sentiment === 'positive'} class:negative={news.sentiment === 'negative'}>
-                  {news.sentiment === 'positive' ? '📈' : news.sentiment === 'negative' ? '📉' : '➡️'}
-                </span>
-                <span class="time">{new Date(news.timestamp).toLocaleTimeString()}</span>
-              </div>
-              <span class="source">{news.source}</span>
-            </div>
-            
-            <div class="news-content">
-              <h3 class="news-title">{news.title}</h3>
-              <div class="key-points">
-                <ul>
-                  {#each news.keyPoints as point}
-                    <li>{point}</li>
-                  {/each}
-                </ul>
-              </div>
-            </div>
-
-            <div class="recommendation">
-              <h4>Рекомендация ИИ</h4>
-              <div class="confidence-meter">
-                <div class="confidence-bar-center">
-                  {#if news.recommendation.action === 'buy'}
-                    <div class="confidence-bar right" style="width: {news.recommendation.confidence / 2}%"></div>
-                  {:else if news.recommendation.action === 'sell'}
-                    <div class="confidence-bar left" style="width: {news.recommendation.confidence / 2}%"></div>
-                  {:else}
-                    <div class="confidence-bar hold" style="width: 0%"></div>
+          <a href="/news/{news.id}" class="news-card-link">
+            <article class="news-card">
+              <div class="news-header">
+                <div class="news-meta">
+                  <span class="ticker">{news.ticker}</span>
+                  {#if news.tags && news.tags.length > 0}
+                    <div class="news-tags">
+                      {#each news.tags as tag}
+                        <span class="news-tag">{tag}</span>
+                      {/each}
+                    </div>
                   {/if}
+                  <span class="sentiment" class:positive={news.sentiment === 'positive'} class:negative={news.sentiment === 'negative'}>
+                    {news.sentiment === 'positive' ? '📈' : news.sentiment === 'negative' ? '📉' : '➡️'}
+                  </span>
+                  <span class="time">{new Date(news.timestamp).toLocaleTimeString()}</span>
+                </div>
+                <span class="source">{news.source}</span>
+              </div>
+              
+              <div class="news-content">
+                <h3 class="news-title">{news.title}</h3>
+                <div class="key-points">
+                  <ul>
+                    {#each news.keyPoints as point}
+                      <li>{point}</li>
+                    {/each}
+                  </ul>
                 </div>
               </div>
-              <span class="confidence-text">Уверенность: {news.recommendation.confidence}%</span>
-              <p class="reasoning">{news.recommendation.reasoning}</p>
-              <div class="action-buttons">
-                <button class="action-button">{news.recommendation.action === 'buy' ? `Купить ${news.ticker}` : news.recommendation.action === 'sell' ? `Продать ${news.ticker}` : `Держать ${news.ticker}`}</button>
+
+              <div class="recommendation">
+                <h4>Рекомендация ИИ</h4>
+                <div class="confidence-meter">
+                  <div class="confidence-bar-center">
+                    {#if news.recommendation.action === 'buy'}
+                      <div class="confidence-bar right" style="width: {news.recommendation.confidence / 2}%"></div>
+                    {:else if news.recommendation.action === 'sell'}
+                      <div class="confidence-bar left" style="width: {news.recommendation.confidence / 2}%"></div>
+                    {:else}
+                      <div class="confidence-bar hold" style="width: 0%"></div>
+                    {/if}
+                  </div>
+                </div>
+                <span class="confidence-text">Уверенность: {news.recommendation.confidence}%</span>
+                <p class="reasoning">{news.recommendation.reasoning}</p>
+                <div class="action-buttons">
+                  <button class="action-button">{news.recommendation.action === 'buy' ? `Купить ${news.ticker}` : news.recommendation.action === 'sell' ? `Продать ${news.ticker}` : `Держать ${news.ticker}`}</button>
+                </div>
               </div>
-            </div>
-          </article>
+            </article>
+          </a>
         {/each}
       {/if}
     </section>
@@ -245,45 +324,82 @@
   }
 
   .header {
-    text-align: center;
-    margin-bottom: 2rem;
+    margin-bottom: 1.5rem;
+    padding: 1rem 0;
+    border-bottom: 1px solid #333;
   }
 
-  h1 {
+  .header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .header-left {
+    text-align: left;
+  }
+
+  .header-left h1 {
+    font-size: 2rem;
+    margin: 0;
     color: #ffdd2d;
-    font-size: 2.5rem;
-    margin-bottom: 0.5rem;
     font-weight: 700;
   }
 
   .subtitle {
+    margin: 0.5rem 0 0 0;
     color: #a0a0a0;
-    font-size: 1.2rem;
+    font-size: 1rem;
+  }
+
+  .profile-section {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+  }
+
+  .balance {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+  }
+
+  .balance-label {
+    font-size: 0.9rem;
+    color: #a0a0a0;
+  }
+
+  .balance-amount {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: #ffdd2d;
+  }
+
+  .profile-button {
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    transition: transform 0.2s;
+  }
+
+  .profile-button:hover {
+    transform: scale(1.05);
+  }
+
+  .profile-icon {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    border: 2px solid #ffdd2d;
   }
 
   .tabs {
-    display: flex;
-    gap: 1rem;
-    margin-bottom: 2rem;
-    border-bottom: 1px solid #333;
-    padding-bottom: 1rem;
+    display: none;
   }
 
   .tab-button {
-    padding: 0.75rem 1.5rem;
-    border: none;
-    background: none;
-    font-size: 1rem;
-    cursor: pointer;
-    color: #a0a0a0;
-    border-radius: 4px;
-    transition: all 0.2s;
-  }
-
-  .tab-button.active {
-    background: #ffdd2d;
-    color: #1a1a1a;
-    font-weight: 600;
+    display: none;
   }
 
   .content {
@@ -354,6 +470,12 @@
     display: flex;
     flex-direction: column;
     gap: 1rem;
+  }
+
+  .news-card-link {
+    text-decoration: none;
+    color: inherit;
+    display: block;
   }
 
   .news-card {
@@ -436,7 +558,9 @@
   .confidence-text {
     font-size: 0.8rem;
     color: #a0a0a0;
-    margin-top: 0.05rem;
+    margin-top: 0.5rem;
+    text-align: right;
+    display: block;
   }
 
   .reasoning {
@@ -518,7 +642,6 @@
     background: rgba(255, 221, 45, 0.1);
     padding: 0.2rem 0.5rem;
     border-radius: 4px;
-    white-space: nowrap;
   }
 
   .news-content {
@@ -585,29 +708,105 @@
     border: 1px solid #ff3e00;
   }
 
-  @media (max-width: 768px) {
-    .content {
-      grid-template-columns: 1fr;
-    }
+  .important-news-section {
+    margin-bottom: 2rem;
+  }
 
-    .sidebar {
-      order: 2;
-    }
+  .important-news-section h2 {
+    color: #ffdd2d;
+    margin-bottom: 1rem;
+    font-size: 1.5rem;
+  }
 
-    .news-content {
-      flex-direction: column;
-      gap: 0.5rem;
-    }
+  .important-news-stories {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 1rem;
+    width: 100%;
+    padding: 0.5rem 0;
+  }
 
-    .news-header {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 0.25rem;
-    }
+  .important-news-story {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    width: 100%;
+    height: 100%;
+  }
 
-    .news-meta {
-      width: 100%;
-      justify-content: space-between;
+  .story-preview {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    background: #242424;
+    border: 2px solid #333;
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .story-preview:hover {
+    border-color: #ffdd2d;
+    transform: scale(1.02);
+  }
+
+  .story-preview-content {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: flex-start;
+  }
+
+  .story-title {
+    font-size: 0.85rem;
+    margin: 0 0 0.5rem 0;
+    color: #ffffff;
+    line-height: 1.2;
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+  }
+
+  .story-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    margin-top: auto;
+  }
+
+  .story-tag {
+    font-size: 0.65rem;
+    color: #e0e0e0;
+    background: rgba(160, 160, 160, 0.2);
+    padding: 0.1rem 0.3rem;
+    border-radius: 3px;
+    white-space: nowrap;
+  }
+
+  @media (max-width: 1200px) {
+    .important-news-stories {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+
+  @media (max-width: 900px) {
+    .important-news-stories {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+
+  @media (max-width: 600px) {
+    .important-news-stories {
+      grid-template-columns: repeat(2, 1fr);
     }
   }
 </style> 

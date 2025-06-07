@@ -158,12 +158,12 @@
     background-color: #ffdd2d;
     color: #1a1a1a;
     border: none;
-    border-radius: 15px; /* Увеличить закругление кнопки */
+    border-radius: 25px; /* Сделать кнопку более закругленной */
     font-size: 1rem;
     font-weight: 600;
     cursor: pointer;
     transition: background-color 0.2s, transform 0.2s, border-radius 0.2s; /* Добавить transition для border-radius */
-    margin-top: 1.5rem; /* Увеличить отступ сверху для центрирования */
+    margin-top: 1.5rem;
     display: block; /* Убедиться, что кнопка является блочным элементом */
     margin-left: auto; /* Центрирование */
     margin-right: auto; /* Центрирование */
