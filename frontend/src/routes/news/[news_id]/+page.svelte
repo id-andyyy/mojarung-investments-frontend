@@ -1,129 +1,105 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import Chart from 'chart.js/auto'; // Импортируем Chart.js
+  import { page } from '$app/stores'; // Import page store to get URL parameters
 
-  // Моковые данные для демонстрации (скопировано из +page.svelte для согласованности)
-  const mockNews = [
-    {
-      id: 1,
-      title: 'ЛУКОЙЛ объявил о рекордной прибыли',
-      summary: 'Компания показала рост прибыли на 25% по сравнению с прошлым кварталом',
-      keyPoints: [
-        'Прибыль выросла на 25% к прошлому кварталу',
-        'Дивиденды могут быть увеличены',
-        'Новые проекты в Арктике'
-      ],
-      ticker: 'LKOH',
-      sentiment: 'positive',
-      source: 'РБК',
-      timestamp: '2024-03-20T09:00:00Z',
-      recommendation: {
-        action: 'buy',
-        confidence: 85,
-        reasoning: 'Сильный рост прибыли и перспективные проекты указывают на потенциал роста акций. Компания демонстрирует устойчивый рост финансовых показателей, что подтверждается увеличением прибыли на 25%. Новые проекты в Арктическом регионе открывают дополнительные возможности для развития бизнеса. Аналитики ожидают дальнейшего укрепления позиций компании на рынке.'
-      },
-      tags: ['нефть', 'энергетика', 'дивиденды'],
-      fullText: 'ЛУКОЙЛ, одна из крупнейших нефтяных компаний России, объявила о рекордной прибыли по итогам последнего финансового квартала. Согласно официальным данным, прибыль компании выросла на 25% по сравнению с предыдущим кварталом, что значительно превзошло ожидания аналитиков. Этот рост обусловлен благоприятной конъюнктурой мирового рынка нефти, а также эффективной оптимизацией внутренних бизнес-процессов. Компания также намекнула на возможное увеличение дивидендов для акционеров, что вызвало позитивную реакцию на рынке. В дополнение к этому, ЛУКОЙЛ активно развивает новые проекты в Арктическом регионе, что обещает долгосрочные перспективы роста и укрепление позиций на глобальном энергетическом рынке.',
-      chartData: [
+  let newsItem: any = null; // Initialize as null, will be populated from API
+  let isLoading = true; // Set to true initially for loading state
+  let error: string | null = null;
+
+  // Function to process backend news data for Chart.js and other UI elements
+  function processNewsData(data: any) {
+    console.log('Начало обработки данных новости:', data);
+    
+    // Assuming tags and tickers come as comma-separated strings if not an array
+    if (typeof data.tags === 'string' && data.tags.trim() !== '') {
+      console.log('Обработка тегов из строки:', data.tags);
+      data.tags = data.tags.split(',').map((tag: string) => tag.trim());
+      console.log('Теги после обработки:', data.tags);
+    } else {
+      console.log('Теги отсутствуют или не являются строкой, устанавливаем пустой массив');
+      data.tags = []; // Ensure it's an array, even if empty
+    }
+    
+    // For ticker, if it comes as part of tickers string, take the first one or default
+    if (typeof data.tickers === 'string' && data.tickers.trim() !== '') {
+      console.log('Обработка тикеров из строки:', data.tickers);
+      const tickersArray = data.tickers.split(',').map((t: string) => t.trim());
+      data.ticker = tickersArray.length > 0 ? tickersArray[0] : '';
+      console.log('Выбранный тикер:', data.ticker);
+    } else {
+      console.log('Тикеры отсутствуют или не являются строкой, устанавливаем пустой тикер');
+      data.ticker = ''; // Default empty ticker
+    }
+
+    // Map 'is_positive' to 'sentiment' for existing UI logic
+    console.log('Преобразование is_positive в sentiment:', data.is_positive);
+    data.sentiment = data.is_positive ? 'positive' : 'negative';
+    console.log('Результат sentiment:', data.sentiment);
+
+    // Placeholder for chartData if not provided by the backend.
+    if (!data.chartData || data.chartData.length === 0) {
+      console.log('Данные для графика отсутствуют, используем тестовые данные');
+      data.chartData = [
         { date: '2024-03-01', value: 100 },
         { date: '2024-03-05', value: 105 },
         { date: '2024-03-10', value: 110 },
         { date: '2024-03-15', value: 108 },
         { date: '2024-03-20', value: 115 }
-      ]
-    },
-    {
-      id: 2,
-      title: 'Сбербанк запускает новую программу для инвесторов',
-      summary: 'Банк представил инновационный продукт для розничных инвесторов',
-      keyPoints: [
-        'Новый ИИ-ассистент для трейдеров',
-        'Комиссии снижены на 30%',
-        'Доступ к премиум-аналитике'
-      ],
-      ticker: 'SBER',
-      sentiment: 'positive',
-      source: 'Интерфакс',
-      timestamp: '2024-03-20T08:45:00Z',
-      recommendation: {
-        action: 'buy',
-        confidence: 75,
-        reasoning: 'Инновационные продукты могут привлечь новых клиентов и увеличить доходы'
-      },
-      tags: ['банки', 'финансы', 'технологии', 'инвестиции'],
-      fullText: 'Сбербанк, крупнейший банк России, представил новую инновационную программу, разработанную специально для розничных инвесторов. В рамках этой программы банк запускает передового ИИ-ассистента, который будет помогать трейдерам принимать обоснованные решения, анализируя огромные объемы данных в реальном времени. Одним из ключевых преимуществ новой программы является снижение комиссий на 30%, что делает инвестиции более доступными для широкого круга клиентов. Кроме того, инвесторы получат эксклюзивный доступ к премиум-аналитике и исследованиям рынка от ведущих экспертов Сбербанка, что позволит им быть в курсе последних тенденций и принимать более информированные решения.',
-      chartData: [
-        { date: '2024-03-01', value: 200 },
-        { date: '2024-03-05', value: 202 },
-        { date: '2024-03-10', value: 205 },
-        { date: '2024-03-15', value: 203 },
-        { date: '2024-03-20', value: 207 }
-      ]
-    },
-    {
-      id: 3,
-      title: 'Газпром снижает прогноз по добыче газа',
-      summary: 'Компания пересмотрела планы по добыче в связи с рыночной ситуацией',
-      keyPoints: [
-        'Снижение добычи на 15%',
-        'Переориентация на азиатский рынок',
-        'Отложены новые проекты'
-      ],
-      ticker: 'GAZP',
-      sentiment: 'negative',
-      source: 'Ведомости',
-      timestamp: '2024-03-20T08:30:00Z',
-      recommendation: {
-        action: 'sell',
-        confidence: 80,
-        reasoning: 'Снижение добычи и отложенные проекты могут негативно повлиять на финансовые показатели'
-      },
-      tags: ['газ', 'энергетика', 'санкции'],
-      fullText: 'Газпром, ведущая российская газовая компания, объявила о пересмотре своих планов по добыче газа на текущий год. В связи с изменением рыночной ситуации и геополитических факторов, компания снизила прогноз по добыче на 15%. Это решение является частью более широкой стратегии по адаптации к новым реалиям на мировом энергетическом рынке. Газпром также подтвердил свои намерения по переориентации поставок газа на азиатские рынки, активно развивая инфраструктуру и налаживая новые партнерские отношения в этом регионе. Тем не менее, некоторые новые проекты по добыче газа были отложены на неопределенный срок, что может повлиять на долгосрочные перспективы компании.',
-      chartData: [
-        { date: '2024-03-01', value: 50 },
-        { date: '2024-03-05', value: 48 },
-        { date: '2024-03-10', value: 45 },
-        { date: '2024-03-15', value: 47 },
-        { date: '2024-03-20', value: 42 }
-      ]
-    },
-    {
-      id: 4,
-      title: 'Яндекс анонсирует новые сервисы для бизнеса',
-      summary: 'Компания расширяет линейку B2B-продуктов',
-      keyPoints: [
-        'Запуск облачной платформы',
-        'Интеграция с Тинькофф',
-        'Новые тарифы для малого бизнеса'
-      ],
-      ticker: 'YNDX',
-      sentiment: 'neutral',
-      source: 'Коммерсант',
-      timestamp: '2024-03-20T08:15:00Z',
-      recommendation: {
-        action: 'hold',
-        confidence: 65,
-        reasoning: 'Новые сервисы могут принести результаты в долгосрочной перспективе'
-      },
-      tags: ['технологии', 'интернет', 'B2B'],
-      fullText: 'Яндекс, российский технологический гигант, анонсировал запуск целого ряда новых сервисов, ориентированных на бизнес-сектор. В рамках расширения линейки B2B-продуктов компания представила новую облачную платформу, которая предоставит предприятиям доступ к масштабируемым вычислительным ресурсам и передовым инструментам для анализа данных. Также было объявлено об интеграции с Тинькофф, что позволит клиентам пользоваться бесшовными финансовыми услугами прямо внутри платформы Яндекса. В дополнение к этому, Яндекс вводит новые, более гибкие тарифные планы для малого и среднего бизнеса, что сделает их продукты и сервисы более доступными и привлекательными для широкого круга компаний.',
-      chartData: [
-        { date: '2024-03-01', value: 300 },
-        { date: '2024-03-05', value: 305 },
-        { date: '2024-03-10', value: 303 },
-        { date: '2024-03-15', value: 308 },
-        { date: '2024-03-20', value: 310 }
-      ]
+      ];
+    } else {
+      console.log('Используем предоставленные данные для графика:', data.chartData);
     }
-  ];
 
-  let newsItem: any = mockNews[0]; // Выбираем первую новость для демонстрации
-  let isLoading = false; // Не загружаем, так как данные уже есть
-  let error: string | null = null;
+    console.log('Итоговые обработанные данные:', data);
+    return data;
+  }
+
+  async function fetchNews(newsId: string) {
+    console.log('Начало загрузки новости с ID:', newsId);
+    isLoading = true;
+    error = null;
+    
+    try {
+      const token = localStorage.getItem('access_token');
+      if (!token) {
+        console.error('Токен доступа не найден в localStorage');
+        throw new Error('No access token found. Please log in.');
+      }
+      console.log('Токен доступа получен');
+
+      console.log('Отправка запроса к API:', `http://localhost:8000/api/news/${newsId}`);
+      const response = await fetch(`http://localhost:8000/api/news/${newsId}`, {
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        console.error('Ошибка при получении ответа:', response.status, response.statusText);
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to fetch news item.');
+      }
+
+      console.log('Успешный ответ от API');
+      let data = await response.json();
+      console.log('Полученные данные:', data);
+      
+      newsItem = processNewsData(data); // Process data before assigning
+      console.log('Данные обработаны и сохранены в newsItem');
+    } catch (e: any) {
+      console.error('Ошибка при загрузке новости:', e);
+      error = e.message;
+    } finally {
+      isLoading = false;
+      console.log('Загрузка завершена, isLoading =', isLoading);
+    }
+  }
 
   // Функция для обработки нажатия кнопки покупки/продажи (заглушка)
   function handleAction(action: string, ticker: string) {
+    console.log('Обработка действия:', action, 'для тикера:', ticker);
     alert(`${action} ${ticker}`);
   }
 
@@ -141,15 +117,18 @@
   let newMessage = '';
 
   function toggleChat() {
+    console.log('Переключение состояния чата:', !isChatOpen);
     isChatOpen = !isChatOpen;
   }
 
   function sendMessage() {
     if (newMessage.trim()) {
+      console.log('Отправка сообщения:', newMessage);
       chatMessages = [...chatMessages, { text: newMessage, sender: 'user' }];
       // Here you would typically send the message to your backend
       // For now, we'll just simulate a response
       setTimeout(() => {
+        console.log('Получен ответ от бота');
         chatMessages = [...chatMessages, { 
           text: 'Это демо-ответ от чат-бота. В будущем здесь будет реальный ответ от ИИ.', 
           sender: 'bot' 
@@ -159,20 +138,26 @@
     }
   }
 
-  onMount(() => {
-    // Проверяем, что newsItem.chartData существует и содержит данные
-    
+  // Function to initialize or update the chart
+  function initializeChart() {
+    console.log('Начало инициализации графика');
     if (newsItem && newsItem.chartData && newsItem.chartData.length > 0) {
+      console.log('Данные для графика доступны:', newsItem.chartData);
       const ctx = document.getElementById('stockChartCanvas') as HTMLCanvasElement;
       if (ctx) {
+        console.log('Canvas элемент найден');
+        // Destroy existing chart if it exists
+        if (chartInstance) {
+          console.log('Удаление существующего графика');
+          chartInstance.destroy();
+        }
+
         // Деструктурируем данные для Chart.js
         const labels = newsItem.chartData.map((d: { date: string; }) => new Date(d.date).toLocaleDateString('ru-RU', { month: 'short', day: 'numeric' }));
         const values = newsItem.chartData.map((d: { value: any; }) => d.value);
+        console.log('Подготовленные данные для графика:', { labels, values });
 
-        if (chartInstance) {
-          chartInstance.destroy(); // Уничтожаем предыдущий экземпляр графика, если он есть
-        }
-
+        console.log('Создание нового графика');
         chartInstance = new Chart(ctx, {
           type: 'line',
           data: {
@@ -220,9 +205,37 @@
             }
           }
         });
+        console.log('График успешно создан');
+      } else {
+        console.error('Canvas элемент не найден');
       }
     } else {
-      console.warn("Отсутствуют данные chartData для отрисовки графика.");
+      console.warn("Отсутствуют данные chartData для отрисовки графика");
+    }
+  }
+
+  // Subscribe to page store changes
+  $: if ($page.params.news_id) {
+    console.log('Обнаружено изменение news_id в URL:', $page.params.news_id);
+    fetchNews($page.params.news_id).then(() => {
+      console.log('Данные загружены, инициализация графика');
+      initializeChart();
+    });
+  }
+
+  onMount(() => {
+    console.log('Компонент смонтирован');
+    // Initial fetch if news_id is present
+    if ($page.params.news_id) {
+      console.log('Начальная загрузка данных для news_id:', $page.params.news_id);
+      fetchNews($page.params.news_id).then(() => {
+        console.log('Начальные данные загружены, инициализация графика');
+        initializeChart();
+      });
+    } else {
+      console.warn('News ID не найден в URL');
+      error = 'News ID not found in URL.';
+      isLoading = false;
     }
   });
 </script>
