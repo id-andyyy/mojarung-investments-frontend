@@ -623,7 +623,7 @@
 				<div class="error">{error}</div>
 			{:else if filteredNewsItems.length > 0}
 				{#each filteredNewsItems as news}
-					<a href="/news/{news.id}" class="news-card-link">
+					<a href="/news" class="news-card-link">
 						<article class="news-card">
 							<div class="news-header">
 								<div class="news-meta">
