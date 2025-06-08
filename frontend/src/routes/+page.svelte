@@ -13,8 +13,6 @@
 	let isLoggedIn = false;
 	let userBalance: { balance: number; currency: string } | null = null;
 	let isBalanceLoading = false;
-	let importantNews: any[] = [];
-	let isImportantNewsLoading = true;
 	let selectedTags: string[] = [];
 
 	$: availableTickers = Array.from(
@@ -31,20 +29,6 @@
 			selectedTags.length === 0 || item.tags.some((tag: string) => selectedTags.includes(tag));
 		return tickerMatch && tagMatch;
 	});
-
-	// Показывать всегда 7 карточек (седьмая всегда заполнена)
-	$: visibleStories = (() => {
-		const stories = importantNews.slice(0, 7);
-		while (stories.length < 7) {
-			stories.push({
-				id: -(stories.length + 1), // unique negative id for keys
-				title: "Больше новостей за 24 часа нет",
-				ticker: null,
-				tags: []
-			});
-		}
-		return stories;
-	})();
 
 	async function fetchAndApplyRecommendation(newsItem: any) {
 		// Only fetch recommendation if a ticker exists
@@ -167,7 +151,6 @@
 			}
 			isLoggedIn = true;
 			fetchBalance();
-			fetchImportantNews();
 
 			if (!response.ok) {
 				const errorData = await response
@@ -292,14 +275,33 @@
 		}
 	}
 
-	// Logout function for the main page
-	/* function logout() {
-		if (browser) {
-			localStorage.removeItem("access_token");
-			isLoggedIn = false; // Update reactivity
-			goto("/login");
+	async function fetchBalance() {
+		if (!browser) return;
+		const token = localStorage.getItem("access_token");
+		if (!token) return; // Should not happen if called correctly
+
+		isBalanceLoading = true;
+		try {
+			const response = await fetch("http://176.124.212.149:8000/api/invest/sandbox/balance", {
+				headers: {
+					Authorization: `Bearer ${token}`
+				}
+			});
+
+			if (response.ok) {
+				const data = await response.json();
+				userBalance = { balance: data.balance, currency: data.currency };
+			} else {
+				console.error("Failed to fetch balance:", await response.text());
+				userBalance = null; // Reset on failure
+			}
+		} catch (e) {
+			console.error("Error fetching balance:", e);
+			userBalance = null;
+		} finally {
+			isBalanceLoading = false;
 		}
-	} */
+	}
 </script>
 
 <main class="container">
@@ -388,33 +390,6 @@
 			</div>
 		</div>
 	</header>
-
-	<div class="important-news-section">
-		<h2>Важные новости за день</h2>
-		{#if isImportantNewsLoading}
-			<div class="loading">Загрузка...</div>
-		{:else if importantNews.length === 0}
-			<div class="no-news-placeholder">Нет важных новостей за последние 24 часа.</div>
-		{:else}
-			<div class="important-news-stories">
-				{#each visibleStories as news}
-					<div class="important-news-story">
-						<div class="story-preview">
-							<div class="story-preview-content">
-								<h3 class="story-title">{news.title}</h3>
-								<div class="story-tags">
-									{#if news.ticker}<span class="story-tag">{news.ticker}</span>{/if}
-									{#each news.tags as tag}
-										<span class="story-tag">{tag}</span>
-									{/each}
-								</div>
-							</div>
-						</div>
-					</div>
-				{/each}
-			</div>
-		{/if}
-	</div>
 
 	<div class="content">
 		<aside class="sidebar">
@@ -1475,7 +1450,10 @@
 		font-weight: 600;
 		font-size: 0.9rem;
 		cursor: pointer;
-		transition: background-color 0.2s, border-color 0.2s, color 0.2s;
+		transition:
+			background-color 0.2s,
+			border-color 0.2s,
+			color 0.2s;
 		margin-left: 10px; /* Spacing between profile/login and logout */
 	}
 
@@ -1517,7 +1495,9 @@
 		border-radius: 8px;
 		margin-bottom: 1.5rem;
 		padding: 1rem;
-		transition: transform 0.2s, box-shadow 0.2s;
+		transition:
+			transform 0.2s,
+			box-shadow 0.2s;
 	}
 
 	.news-card:hover {
