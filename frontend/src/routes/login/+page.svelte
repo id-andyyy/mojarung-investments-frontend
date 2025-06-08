@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from "$app/navigation";
+	import { browser } from "$app/environment";
 	let login = "";
 	let password = "";
 	let error: string | null = null;
@@ -48,12 +49,13 @@
 			}
 
 			const data = await response.json();
-			console.log("[Login Page] Login successful. Backend should have set HttpOnly cookie.", data);
+			console.log("[Login Page] Login successful. Received token:", data.access_token);
 
-			// Не нужно устанавливать куки вручную, бэкенд делает это через Set-Cookie с HttpOnly
-			// const expires = new Date(Date.now() + 86400 * 1000).toUTCString(); // 1 day
-			// document.cookie = `access_token=${data.access_token}; expires=${expires}; path=/; HttpOnly=false; Secure=false`;
-			// console.log(`[Login Page] Set cookie with access_token.`);
+			// Сохраняем токен в localStorage
+			if (browser) {
+				localStorage.setItem("access_token", data.access_token);
+				console.log("[Login Page] Token saved to localStorage.");
+			}
 
 			// Redirect to the main page on successful login
 			await goto("/");
