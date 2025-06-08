@@ -45,6 +45,15 @@
   let newTelegramId = '';
   let selectedCompanyId: number | null = null;
 
+  // Состояние для красивого выбора тикеров
+  let searchTerm = '';
+  let showCompanyDropdown = false;
+  let isSearchFocused = false;
+
+  // Состояние для уведомлений
+  let notifications: Array<{id: number, type: 'success' | 'error', message: string}> = [];
+  let notificationId = 0;
+
   // Состояние для обновлений
   let isUpdatingProfile = false;
   let isUpdatingToken = false;
@@ -156,15 +165,15 @@
       if (response.ok) {
         userData = await response.json();
         newInvestToken = '';
-        alert('Токен инвестиций обновлен успешно!');
+        showNotification('success', 'Токен инвестиций обновлен успешно!');
         // Перезагружаем баланс с новым токеном
         await loadBalance();
       } else {
         const errorData = await response.json();
-        alert(`Ошибка: ${errorData.detail || 'Не удалось обновить токен'}`);
+        showNotification('error', `Ошибка: ${errorData.detail || 'Не удалось обновить токен'}`);
       }
     } catch (e: any) {
-      alert(`Ошибка: ${e.message}`);
+      showNotification('error', `Ошибка: ${e.message}`);
     } finally {
       isUpdatingToken = false;
     }
@@ -188,21 +197,22 @@
       if (response.ok) {
         userData = await response.json();
         newTelegramId = '';
-        alert('Telegram ID обновлен успешно!');
+        showNotification('success', 'Telegram ID обновлен успешно!');
       } else {
         const errorData = await response.json();
-        alert(`Ошибка: ${errorData.detail || 'Не удалось обновить Telegram ID'}`);
+        showNotification('error', `Ошибка: ${errorData.detail || 'Не удалось обновить Telegram ID'}`);
       }
     } catch (e: any) {
-      alert(`Ошибка: ${e.message}`);
+      showNotification('error', `Ошибка: ${e.message}`);
     } finally {
       isUpdatingTelegram = false;
     }
   }
 
   // Добавление тикера
-  async function addTicker() {
-    if (!selectedCompanyId) return;
+  async function addTicker(companyId?: number) {
+    const targetCompanyId = companyId || selectedCompanyId;
+    if (!targetCompanyId) return;
 
     try {
       const response = await fetch('/api/users/me/tickers', {
@@ -211,20 +221,61 @@
           'Content-Type': 'application/json'
         },
         credentials: 'include',
-        body: JSON.stringify({ company_id: selectedCompanyId })
+        body: JSON.stringify({ company_id: targetCompanyId })
       });
 
       if (response.ok) {
         await loadUserTickers();
         selectedCompanyId = null;
-        alert('Тикер добавлен в избранное!');
+        searchTerm = '';
+        showCompanyDropdown = false;
+        const company = availableCompanies.find(c => c.id === targetCompanyId);
+        showNotification('success', `${company?.ticker || 'Тикер'} добавлен в избранное!`);
       } else {
         const errorData = await response.json();
-        alert(`Ошибка: ${errorData.detail || 'Не удалось добавить тикер'}`);
+        showNotification('error', `Ошибка: ${errorData.detail || 'Не удалось добавить тикер'}`);
       }
     } catch (e: any) {
-      alert(`Ошибка: ${e.message}`);
+      showNotification('error', `Ошибка: ${e.message}`);
     }
+  }
+
+  // Функции для управления поиском
+  function handleSearchFocus() {
+    isSearchFocused = true;
+    showCompanyDropdown = true;
+  }
+
+  function handleSearchBlur() {
+    // Задержка, чтобы клик по компании успел сработать
+    setTimeout(() => {
+      isSearchFocused = false;
+      showCompanyDropdown = false;
+    }, 200);
+  }
+
+  function selectCompany(company: Company) {
+    addTicker(company.id);
+  }
+
+  function clearSearch() {
+    searchTerm = '';
+    showCompanyDropdown = false;
+  }
+
+  // Функции для уведомлений
+  function showNotification(type: 'success' | 'error', message: string) {
+    const id = ++notificationId;
+    notifications = [...notifications, { id, type, message }];
+    
+    // Автоматически удаляем уведомление через 3 секунды
+    setTimeout(() => {
+      removeNotification(id);
+    }, 3000);
+  }
+
+  function removeNotification(id: number) {
+    notifications = notifications.filter(n => n.id !== id);
   }
 
   // Удаление тикера
@@ -237,13 +288,13 @@
 
       if (response.ok) {
         await loadUserTickers();
-        alert('Тикер удален из избранного!');
+        showNotification('success', `${ticker} удален из избранного!`);
       } else {
         const errorData = await response.json();
-        alert(`Ошибка: ${errorData.detail || 'Не удалось удалить тикер'}`);
+        showNotification('error', `Ошибка: ${errorData.detail || 'Не удалось удалить тикер'}`);
       }
     } catch (e: any) {
-      alert(`Ошибка: ${e.message}`);
+      showNotification('error', `Ошибка: ${e.message}`);
     }
   }
 
@@ -264,6 +315,12 @@
   $: availableToAdd = availableCompanies.filter(company => 
     !userTickers.includes(company.ticker)
   );
+
+  // Фильтрация компаний по поиску
+  $: filteredCompanies = availableToAdd.filter(company =>
+    company.ticker.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    company.company_name.toLowerCase().includes(searchTerm.toLowerCase())
+  ).slice(0, 8); // Показываем максимум 8 результатов
 
   // Форматирование баланса
   function formatBalance(balance: number): string {
@@ -396,50 +453,127 @@
         <div class="tickers-section">
           <h3>Интересующие тикеры</h3>
           
-          <!-- Добавление нового тикера -->
-          <div class="add-ticker-section">
-            <select bind:value={selectedCompanyId} class="ticker-select">
-              <option value={null}>Выберите компанию для добавления</option>
-              {#each availableToAdd as company}
-                <option value={company.id}>
-                  {company.ticker} - {company.company_name}
-                </option>
-              {/each}
-            </select>
-            <button 
-              on:click={addTicker} 
-              class="add-ticker-button"
-              disabled={!selectedCompanyId}
-            >
-              + Добавить
-            </button>
+          <!-- Красивый поиск и добавление тикеров -->
+          <div class="ticker-search-section">
+            <div class="search-container">
+              <div class="search-input-wrapper">
+                <input 
+                  type="text" 
+                  bind:value={searchTerm}
+                  on:focus={handleSearchFocus}
+                  on:blur={handleSearchBlur}
+                  placeholder="Поиск компаний по названию или тикеру..."
+                  class="ticker-search-input"
+                  class:focused={isSearchFocused}
+                />
+                <div class="search-icon">
+                  {#if searchTerm}
+                    <button on:click={clearSearch} class="clear-search">×</button>
+                  {:else}
+                    <span class="search-symbol">🔍</span>
+                  {/if}
+                </div>
+              </div>
+              
+              <!-- Dropdown с результатами поиска -->
+              {#if showCompanyDropdown && searchTerm.length > 0}
+                <div class="companies-dropdown">
+                  {#if filteredCompanies.length > 0}
+                    {#each filteredCompanies as company}
+                      <div 
+                        class="company-option"
+                        on:click={() => selectCompany(company)}
+                        on:keydown={(e) => e.key === 'Enter' && selectCompany(company)}
+                        tabindex="0"
+                        role="button"
+                      >
+                        <div class="company-info">
+                          <div class="company-ticker">{company.ticker}</div>
+                          <div class="company-name">{company.company_name}</div>
+                          {#if company.tags}
+                            <div class="company-tags">
+                              {#each company.tags.split(',').slice(0, 2) as tag}
+                                <span class="company-tag">{tag.trim()}</span>
+                              {/each}
+                            </div>
+                          {/if}
+                        </div>
+                        <div class="add-icon">+</div>
+                      </div>
+                    {/each}
+                  {:else}
+                    <div class="no-results">
+                      <span class="no-results-icon">🔍</span>
+                      <p>Компании не найдены</p>
+                      <small>Попробуйте изменить поисковый запрос</small>
+                    </div>
+                  {/if}
+                </div>
+              {/if}
+            </div>
           </div>
 
           <!-- Список выбранных тикеров -->
-          <div class="tickers-list">
+          <div class="selected-tickers">
+            <h4 class="selected-tickers-title">
+              Выбранные компании 
+              <span class="tickers-count">({userTickers.length})</span>
+            </h4>
+            
             {#if userTickers.length > 0}
-              {#each userTickers as ticker}
-                {@const companyInfo = getCompanyInfo(ticker)}
-                <div class="ticker-item">
-                  <div class="ticker-info">
-                    <span class="ticker-symbol">{ticker}</span>
+              <div class="tickers-grid">
+                {#each userTickers as ticker}
+                  {@const companyInfo = getCompanyInfo(ticker)}
+                  <div class="ticker-card">
+                    <div class="ticker-card-header">
+                      <div class="ticker-badge">{ticker}</div>
+                      <button 
+                        on:click={() => removeTicker(ticker)} 
+                        class="remove-ticker-btn"
+                        title="Удалить {ticker}"
+                      >
+                        ×
+                      </button>
+                    </div>
+                    
                     {#if companyInfo}
-                      <span class="ticker-name">{companyInfo.company_name}</span>
+                      <div class="ticker-card-body">
+                        <h5 class="company-title">{companyInfo.company_name}</h5>
+                        {#if companyInfo.tags}
+                          <div class="ticker-tags">
+                            {#each companyInfo.tags.split(',').slice(0, 3) as tag}
+                              <span class="ticker-tag">{tag.trim()}</span>
+                            {/each}
+                          </div>
+                        {/if}
+                      </div>
+                    {:else}
+                      <div class="ticker-card-body">
+                        <h5 class="company-title">Информация недоступна</h5>
+                      </div>
                     {/if}
                   </div>
-                  <button 
-                    on:click={() => removeTicker(ticker)} 
-                    class="remove-ticker-button"
-                    title="Удалить тикер"
-                  >
-                    ×
-                  </button>
-                </div>
-              {/each}
+                {/each}
+              </div>
             {:else}
               <div class="empty-tickers">
-                <p>Вы еще не добавили ни одного тикера</p>
-                <p class="empty-hint">Добавьте интересующие вас компании для персонализированных новостей</p>
+                <div class="empty-icon">📈</div>
+                <h4>Пока нет выбранных компаний</h4>
+                <p>Начните поиск выше, чтобы добавить интересующие вас компании</p>
+                <div class="empty-benefits">
+                  <div class="benefit-item">
+                    <span class="benefit-icon">🎯</span>
+                    <span>Персонализированные новости</span>
+                  </div>
+                  <div class="benefit-item">
+                    <span class="benefit-icon">📊</span>
+                    <span>Отслеживание котировок</span>
+                  </div>
+                  <div class="benefit-item">
+                    <span class="benefit-icon">🔔</span>
+                    <span>Уведомления о важных событиях</span>
+                  </div>
+                </div>
               </div>
             {/if}
           </div>
@@ -447,6 +581,33 @@
       </div>
     </div>
   {/if}
+
+  <!-- Уведомления -->
+  <div class="notifications-container">
+    {#each notifications as notification (notification.id)}
+      <div 
+        class="notification notification-{notification.type}"
+        on:click={() => removeNotification(notification.id)}
+      >
+        <div class="notification-icon">
+          {#if notification.type === 'success'}
+            ✓
+          {:else}
+            ✕
+          {/if}
+        </div>
+        <div class="notification-message">
+          {notification.message}
+        </div>
+        <button 
+          class="notification-close"
+          on:click={() => removeNotification(notification.id)}
+        >
+          ×
+        </button>
+      </div>
+    {/each}
+  </div>
 </main>
 
 <style>
@@ -758,97 +919,261 @@
     font-size: 1.3rem;
   }
 
-  .add-ticker-section {
+  /* Новый красивый поиск тикеров */
+  .ticker-search-section {
+    margin-bottom: 2rem;
+  }
+
+  .search-container {
+    position: relative;
+    width: 100%;
+  }
+
+  .search-input-wrapper {
+    position: relative;
     display: flex;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
     align-items: center;
   }
 
-  .ticker-select {
-    flex: 1;
-    padding: 0.8rem;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 8px;
+  .ticker-search-input {
+    width: 100%;
+    padding: 1rem 3rem 1rem 1rem;
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.08));
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
     color: #ffffff;
-    font-size: 0.9rem;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
   }
 
-  .ticker-select:focus {
+  .ticker-search-input:focus,
+  .ticker-search-input.focused {
     outline: none;
     border-color: #ffdd2d;
-  }
-
-  .add-ticker-button {
-    padding: 0.8rem 1.5rem;
-    background: #4caf50;
-    color: #ffffff;
-    border: none;
-    border-radius: 8px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-    white-space: nowrap;
-  }
-
-  .add-ticker-button:hover:not(:disabled) {
-    background: #45a049;
+    background: linear-gradient(145deg, rgba(255, 221, 45, 0.05), rgba(255, 221, 45, 0.1));
+    box-shadow: 0 0 20px rgba(255, 221, 45, 0.2);
     transform: translateY(-1px);
   }
 
-  .add-ticker-button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+  .ticker-search-input::placeholder {
+    color: rgba(255, 255, 255, 0.5);
   }
 
-  .tickers-list {
+  .search-icon {
+    position: absolute;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
     display: flex;
-    flex-direction: column;
-    gap: 0.8rem;
-  }
-
-  .ticker-item {
-    display: flex;
-    justify-content: space-between;
     align-items: center;
-    padding: 1rem;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 8px;
+    justify-content: center;
+  }
+
+  .search-symbol {
+    font-size: 1.2rem;
+    color: rgba(255, 255, 255, 0.4);
+  }
+
+  .clear-search {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    color: #ffffff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
     transition: all 0.2s;
   }
 
-  .ticker-item:hover {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 221, 45, 0.3);
+  .clear-search:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(1.1);
   }
 
-  .ticker-info {
+  /* Dropdown с результатами поиска */
+  .companies-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    right: 0;
+    background: linear-gradient(145deg, #2a2a2a, #363636);
+    border: 1px solid rgba(255, 221, 45, 0.2);
+    border-radius: 12px;
+    overflow: hidden;
+    z-index: 1000;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(20px);
+    max-height: 400px;
+    overflow-y: auto;
+  }
+
+  .company-option {
     display: flex;
-    flex-direction: column;
-    gap: 0.2rem;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   }
 
-  .ticker-symbol {
+  .company-option:hover {
+    background: rgba(255, 221, 45, 0.1);
+    transform: translateX(4px);
+  }
+
+  .company-option:last-child {
+    border-bottom: none;
+  }
+
+  .company-info {
+    flex: 1;
+  }
+
+  .company-ticker {
     font-weight: 700;
     color: #ffdd2d;
     font-size: 1.1rem;
+    margin-bottom: 0.2rem;
   }
 
-  .ticker-name {
-    color: #a0a0a0;
-    font-size: 0.9rem;
+  .company-name {
+    color: #ffffff;
+    font-size: 0.95rem;
+    margin-bottom: 0.5rem;
+    line-height: 1.3;
   }
 
-  .remove-ticker-button {
+  .company-tags {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .company-tag {
+    background: rgba(255, 221, 45, 0.15);
+    color: #ffdd2d;
+    padding: 0.2rem 0.6rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+
+  .add-icon {
     width: 32px;
     height: 32px;
-    background: rgba(255, 107, 107, 0.2);
+    background: linear-gradient(145deg, #4caf50, #45a049);
+    color: #ffffff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    font-weight: bold;
+    transition: all 0.2s;
+  }
+
+  .company-option:hover .add-icon {
+    transform: scale(1.1) rotate(90deg);
+    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
+  }
+
+  .no-results {
+    text-align: center;
+    padding: 2rem;
+    color: rgba(255, 255, 255, 0.6);
+  }
+
+  .no-results-icon {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    display: block;
+  }
+
+  .no-results p {
+    margin: 0 0 0.5rem 0;
+    font-size: 1rem;
+  }
+
+  .no-results small {
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 0.85rem;
+  }
+
+  /* Выбранные тикеры */
+  .selected-tickers {
+    margin-top: 2rem;
+  }
+
+  .selected-tickers-title {
+    color: #ffffff;
+    font-size: 1.2rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .tickers-count {
+    background: rgba(255, 221, 45, 0.2);
+    color: #ffdd2d;
+    padding: 0.2rem 0.6rem;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    font-weight: 600;
+  }
+
+  .tickers-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1rem;
+  }
+
+  .ticker-card {
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.08));
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+  }
+
+  .ticker-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(255, 221, 45, 0.3);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+  }
+
+  .ticker-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1rem 0.5rem;
+  }
+
+  .ticker-badge {
+    background: linear-gradient(135deg, #ffdd2d, #ffe766);
+    color: #1a1a1a;
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    letter-spacing: 0.5px;
+  }
+
+  .remove-ticker-btn {
+    width: 28px;
+    height: 28px;
+    background: rgba(255, 107, 107, 0.15);
     color: #ff6b6b;
     border: none;
     border-radius: 50%;
-    font-size: 1.2rem;
+    font-size: 1rem;
     font-weight: bold;
     cursor: pointer;
     transition: all 0.2s;
@@ -857,24 +1182,85 @@
     justify-content: center;
   }
 
-  .remove-ticker-button:hover {
-    background: rgba(255, 107, 107, 0.4);
+  .remove-ticker-btn:hover {
+    background: rgba(255, 107, 107, 0.3);
     transform: scale(1.1);
+  }
+
+  .ticker-card-body {
+    padding: 0.5rem 1rem 1rem;
+  }
+
+  .company-title {
+    color: #ffffff;
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0 0 0.8rem 0;
+    line-height: 1.3;
+  }
+
+
+
+  .ticker-tags {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+  }
+
+  .ticker-tag {
+    background: rgba(255, 221, 45, 0.12);
+    color: #ffdd2d;
+    padding: 0.2rem 0.5rem;
+    border-radius: 16px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    border: 1px solid rgba(255, 221, 45, 0.2);
   }
 
   .empty-tickers {
     text-align: center;
-    padding: 2rem;
-    color: #a0a0a0;
+    padding: 3rem 2rem;
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.05));
+    border: 2px dashed rgba(255, 221, 45, 0.2);
+    border-radius: 12px;
+    margin-top: 1rem;
+  }
+
+  .empty-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    display: block;
+  }
+
+  .empty-tickers h4 {
+    color: #ffffff;
+    margin: 0 0 0.5rem 0;
+    font-size: 1.1rem;
   }
 
   .empty-tickers p {
-    margin: 0 0 0.5rem 0;
+    color: rgba(255, 255, 255, 0.6);
+    margin: 0 0 1.5rem 0;
+    font-size: 0.95rem;
   }
 
-  .empty-hint {
+  .empty-benefits {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    margin-top: 1.5rem;
+  }
+
+  .benefit-item {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    color: rgba(255, 255, 255, 0.7);
     font-size: 0.9rem;
-    color: #666;
+  }
+
+  .benefit-icon {
+    font-size: 1.2rem;
   }
 
   /* Адаптивность */
@@ -894,18 +1280,43 @@
       height: 100px;
     }
 
-    .token-input-section, .telegram-input-section, .add-ticker-section {
+    .token-input-section, .telegram-input-section {
       flex-direction: column;
     }
 
-    .ticker-item {
+    .tickers-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .ticker-card-header {
+      padding: 0.8rem 0.8rem 0.4rem;
+    }
+
+    .ticker-card-body {
+      padding: 0.4rem 0.8rem 0.8rem;
+    }
+
+    .companies-dropdown {
+      max-height: 300px;
+    }
+
+    .company-option {
+      padding: 0.8rem;
       flex-direction: column;
       align-items: flex-start;
-      gap: 0.8rem;
+      gap: 0.5rem;
     }
 
-    .remove-ticker-button {
+    .add-icon {
       align-self: flex-end;
+    }
+
+    .empty-benefits {
+      gap: 0.6rem;
+    }
+
+    .benefit-item {
+      font-size: 0.85rem;
     }
   }
 
@@ -924,6 +1335,127 @@
       flex-direction: column;
       align-items: flex-start;
       gap: 0.5rem;
+    }
+  }
+
+  /* Стили уведомлений */
+  .notifications-container {
+    position: fixed;
+    top: 2rem;
+    right: 2rem;
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    pointer-events: none;
+  }
+
+  .notification {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 1rem 1.2rem;
+    border-radius: 12px;
+    backdrop-filter: blur(20px);
+    border: 1px solid;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    pointer-events: auto;
+    min-width: 300px;
+    animation: slideIn 0.3s ease-out;
+  }
+
+  @keyframes slideIn {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+
+  .notification-success {
+    background: linear-gradient(145deg, rgba(76, 175, 80, 0.15), rgba(76, 175, 80, 0.25));
+    border-color: rgba(76, 175, 80, 0.4);
+    color: #4caf50;
+  }
+
+  .notification-error {
+    background: linear-gradient(145deg, rgba(244, 67, 54, 0.15), rgba(244, 67, 54, 0.25));
+    border-color: rgba(244, 67, 54, 0.4);
+    color: #f44336;
+  }
+
+  .notification:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+  }
+
+  .notification-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+  }
+
+  .notification-success .notification-icon {
+    background: rgba(76, 175, 80, 0.3);
+    color: #4caf50;
+  }
+
+  .notification-error .notification-icon {
+    background: rgba(244, 67, 54, 0.3);
+    color: #f44336;
+  }
+
+  .notification-message {
+    flex: 1;
+    color: #ffffff;
+    font-size: 0.95rem;
+    font-weight: 500;
+  }
+
+  .notification-close {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 1.2rem;
+    font-weight: bold;
+    cursor: pointer;
+    padding: 0;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+
+  .notification-close:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+  }
+
+  /* Адаптивность для уведомлений */
+  @media (max-width: 768px) {
+    .notifications-container {
+      top: 1rem;
+      right: 1rem;
+      left: 1rem;
+    }
+
+    .notification {
+      min-width: unset;
     }
   }
 </style> 
