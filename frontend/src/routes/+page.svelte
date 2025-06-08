@@ -13,6 +13,8 @@
 	let isLoggedIn = false;
 	let userBalance: { balance: number; currency: string } | null = null;
 	let isBalanceLoading = false;
+	let importantNews: any[] = [];
+	let isImportantNewsLoading = true;
 	let selectedTags: string[] = [];
 
 	$: availableTickers = Array.from(
@@ -29,6 +31,20 @@
 			selectedTags.length === 0 || item.tags.some((tag: string) => selectedTags.includes(tag));
 		return tickerMatch && tagMatch;
 	});
+
+	// Показывать всегда 7 карточек (седьмая всегда заполнена)
+	$: visibleStories = (() => {
+		const stories = importantNews.slice(0, 7);
+		while (stories.length < 7) {
+			stories.push({
+				id: -(stories.length + 1), // unique negative id for keys
+				title: "Больше новостей за 24 часа нет",
+				ticker: null,
+				tags: []
+			});
+		}
+		return stories;
+	})();
 
 	async function fetchAndApplyRecommendation(newsItem: any) {
 		// Only fetch recommendation if a ticker exists
@@ -151,6 +167,7 @@
 			}
 			isLoggedIn = true;
 			fetchBalance();
+			fetchImportantNews();
 
 			if (!response.ok) {
 				const errorData = await response
@@ -302,6 +319,47 @@
 			isBalanceLoading = false;
 		}
 	}
+
+	async function fetchImportantNews() {
+		if (!browser) return;
+		const token = localStorage.getItem("access_token");
+		if (!token) {
+			isImportantNewsLoading = false;
+			return;
+		}
+		isImportantNewsLoading = true;
+		try {
+			const response = await fetch("http://176.124.212.149:8000/api/news/latest-24h", {
+				headers: { Authorization: `Bearer ${token}` }
+			});
+
+			if (response.ok) {
+				const data = await response.json();
+				// Shuffle array (Fisher-Yates)
+				for (let i = data.length - 1; i > 0; i--) {
+					const j = Math.floor(Math.random() * (i + 1));
+					[data[i], data[j]] = [data[j], data[i]];
+				}
+
+				const randomSample = data.slice(0, 7);
+
+				importantNews = randomSample.map((item: any) => ({
+					id: item.id,
+					title: item.title,
+					ticker: item.tickers?.split(",")[0].trim() || null,
+					tags: item.tags ? item.tags.split(",").map((t: string) => t.trim()) : []
+				}));
+			} else {
+				console.error("Failed to fetch important news");
+				importantNews = [];
+			}
+		} catch (e) {
+			console.error("Error fetching important news:", e);
+			importantNews = [];
+		} finally {
+			isImportantNewsLoading = false;
+		}
+	}
 </script>
 
 <main class="container">
@@ -390,6 +448,33 @@
 			</div>
 		</div>
 	</header>
+
+	<div class="important-news-section">
+		<h2>Важные новости за день</h2>
+		{#if isImportantNewsLoading}
+			<div class="loading">Загрузка...</div>
+		{:else if importantNews.length === 0}
+			<div class="no-news-placeholder">Нет важных новостей за последние 24 часа.</div>
+		{:else}
+			<div class="important-news-stories">
+				{#each visibleStories as news}
+					<div class="important-news-story">
+						<div class="story-preview">
+							<div class="story-preview-content">
+								<h3 class="story-title">{news.title}</h3>
+								<div class="story-tags">
+									{#if news.ticker}<span class="story-tag">{news.ticker}</span>{/if}
+									{#each news.tags as tag}
+										<span class="story-tag">{tag}</span>
+									{/each}
+								</div>
+							</div>
+						</div>
+					</div>
+				{/each}
+			</div>
+		{/if}
+	</div>
 
 	<div class="content">
 		<aside class="sidebar">
