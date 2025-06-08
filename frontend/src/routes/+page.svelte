@@ -338,7 +338,7 @@
 				<div class="error">{error}</div>
 			{:else}
 				{#each newsItems as news}
-					<a href="/news/{news.id}" class="news-card-link">
+					<a href="#" class="news-card-link">
 						<article class="news-card">
 							<div class="news-header">
 								<div class="news-meta">
