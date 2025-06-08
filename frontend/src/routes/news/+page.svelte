@@ -129,6 +129,36 @@
 
   let chartInstance: Chart | null = null;
 
+  // Add chat message interface
+  interface ChatMessage {
+    text: string;
+    sender: 'user' | 'bot';
+  }
+
+  // Add chat bot state
+  let isChatOpen = false;
+  let chatMessages: ChatMessage[] = [];
+  let newMessage = '';
+
+  function toggleChat() {
+    isChatOpen = !isChatOpen;
+  }
+
+  function sendMessage() {
+    if (newMessage.trim()) {
+      chatMessages = [...chatMessages, { text: newMessage, sender: 'user' }];
+      // Here you would typically send the message to your backend
+      // For now, we'll just simulate a response
+      setTimeout(() => {
+        chatMessages = [...chatMessages, { 
+          text: 'Это демо-ответ от чат-бота. В будущем здесь будет реальный ответ от ИИ.', 
+          sender: 'bot' 
+        }];
+      }, 1000);
+      newMessage = '';
+    }
+  }
+
   onMount(() => {
     // Проверяем, что newsItem.chartData существует и содержит данные
     if (newsItem && newsItem.chartData && newsItem.chartData.length > 0) {
@@ -202,13 +232,49 @@
 </script>
 
 <main class="news-detail-container">
+  <!-- Chat Bot Button -->
+  <div class="chat-bot-button" on:click={toggleChat}>
+    <img src="/bik3.png" alt="Chat Bot" class="chat-bot-icon" />
+  </div>
+
+  <!-- Chat Window -->
+  {#if isChatOpen}
+    <div class="chat-window">
+      <div class="chat-header">
+        <h3>Чат с ИИ-ассистентом</h3>
+        <button class="close-button" on:click={toggleChat}>×</button>
+      </div>
+      <div class="chat-messages">
+        {#each chatMessages as message}
+          <div class="message {message.sender}">
+            {message.text}
+          </div>
+        {/each}
+      </div>
+      <div class="chat-input">
+        <input 
+          type="text" 
+          bind:value={newMessage} 
+          placeholder="Введите сообщение..."
+          on:keydown={(e) => e.key === 'Enter' && sendMessage()}
+        />
+        <button on:click={sendMessage}>Отправить</button>
+      </div>
+    </div>
+  {/if}
+
   <header class="header">
     <div class="header-content">
       <div class="header-left">
         <a href="/" class="header-title-link">
-          <h1>TBank News Aggregator</h1>
+          <div class="title-container">
+            <img src="/bik1.png" alt="TBank Logo" class="header-logo" />
+            <div class="title-text">
+              <h1>TBank News Aggregator</h1>
+              <p class="subtitle">Агрегатор новостей для трейдеров</p>
+            </div>
+          </div>
         </a>
-        <p class="subtitle">Агрегатор новостей для трейдеров</p>
       </div>
       <!-- Profile section can be added here if needed, similar to main page -->
     </div>
@@ -325,6 +391,23 @@
     color: inherit;
   }
 
+  .title-container {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .title-text {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .header-logo {
+    width: 60px;
+    height: 60px;
+    object-fit: contain;
+  }
+
   .header-left h1 {
     font-size: 2rem;
     margin: 0;
@@ -345,6 +428,10 @@
       align-items: flex-start;
       gap: 0.5rem;
     }
+    .header-logo {
+      width: 48px;
+      height: 48px;
+    }
     .header-left h1 {
       font-size: 1.5rem;
     }
@@ -354,6 +441,10 @@
   }
 
   @media (max-width: 400px) {
+    .header-logo {
+      width: 40px;
+      height: 40px;
+    }
     .header-left h1 {
       font-size: 1.3rem;
     }
@@ -659,5 +750,163 @@
     max-width: 100%;
     max-height: 250px; /* Ограничиваем максимальную высоту канваса */
     height: auto; /* Позволяет канвасу регулировать высоту */
+  }
+
+  .chat-bot-button {
+    position: fixed;
+    right: 1rem;
+    bottom: 2rem;
+    width: 80px;
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+    z-index: 1000;
+    padding: 0;
+    border: none;
+    background: none;
+  }
+
+  .chat-bot-button:hover {
+    transform: scale(1.1);
+  }
+
+  .chat-bot-icon {
+    width: 70px;
+    height: 70px;
+    object-fit: contain;
+    background: none;
+    mix-blend-mode: multiply;
+  }
+
+  .chat-window {
+    position: fixed;
+    right: 4rem;
+    bottom: 4rem;
+    width: 350px;
+    height: 500px;
+    background-color: #242424;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    display: flex;
+    flex-direction: column;
+    z-index: 1000;
+    border: 1px solid #333;
+  }
+
+  .chat-header {
+    padding: 1rem;
+    background-color: #2a2a2a;
+    border-radius: 12px 12px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #333;
+  }
+
+  .chat-header h3 {
+    margin: 0;
+    color: #ffdd2d;
+    font-size: 1.1rem;
+  }
+
+  .close-button {
+    background: none;
+    border: none;
+    color: #a0a0a0;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+  }
+
+  .close-button:hover {
+    color: #ffffff;
+  }
+
+  .chat-messages {
+    flex-grow: 1;
+    padding: 1rem;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    
+  }
+
+  .message {
+    max-width: 80%;
+    padding: 0.8rem 1rem;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    line-height: 1.4;
+  }
+
+  .message.user {
+    background-color: #ffdd2d;
+    color: #1a1a1a;
+    align-self: flex-end;
+    border-bottom-right-radius: 4px;
+  }
+
+  .message.bot {
+    background-color: #2a2a2a;
+    color: #ffffff;
+    align-self: flex-start;
+    border-bottom-left-radius: 4px;
+  }
+
+  .chat-input {
+    padding: 1rem;
+    border-top: 1px solid #333;
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .chat-input input {
+    flex-grow: 1;
+    padding: 0.8rem;
+    border: 1px solid #333;
+    border-radius: 8px;
+    background-color: #2a2a2a;
+    color: #ffffff;
+    font-size: 0.9rem;
+  }
+
+  .chat-input input:focus {
+    outline: none;
+    border-color: #ffdd2d;
+  }
+
+  .chat-input button {
+    padding: 0.8rem 1.2rem;
+    background-color: #ffdd2d;
+    color: #1a1a1a;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+
+  .chat-input button:hover {
+    background-color: #ffe766;
+  }
+
+  /* Add responsive styles for chat */
+  @media (max-width: 600px) {
+    .chat-window {
+      width: calc(100% - 2rem);
+      height: 60vh;
+      right: 1rem;
+      bottom: 5rem;
+    }
+
+    .chat-bot-button {
+      right: 1rem;
+      bottom: 1rem;
+    }
   }
 </style> 

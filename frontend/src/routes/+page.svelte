@@ -180,8 +180,15 @@
   <header class="header">
     <div class="header-content">
       <div class="header-left">
-        <h1>TBank News Aggregator</h1>
-        <p class="subtitle">Агрегатор новостей для трейдеров</p>
+        <a href="/" class="header-title-link">
+          <div class="title-container">
+            <img src="/bik1.png" alt="TBank Logo" class="header-logo" />
+            <div class="title-text">
+              <h1>TBank News Aggregator</h1>
+              <p class="subtitle">Агрегатор новостей для трейдеров</p>
+            </div>
+          </div>
+        </a>
       </div>
       <div class="profile-section">
         <div class="balance">
@@ -1065,5 +1072,67 @@
   .action-icon svg {
     width: 16px;
     height: 16px;
+  }
+
+  .title-container {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .title-text {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .header-logo {
+    width: 60px;
+    height: 60px;
+    object-fit: contain;
+  }
+
+  .header-left h1 {
+    font-size: 2rem;
+    margin: 0;
+    color: #ffdd2d;
+    font-weight: 700;
+  }
+
+  .subtitle {
+    margin: 0.5rem 0 0 0;
+    color: #a0a0a0;
+    font-size: 1rem;
+  }
+
+  /* Update mobile styles */
+  @media (max-width: 600px) {
+    .header-logo {
+      width: 48px;
+      height: 48px;
+    }
+    .header-left h1 {
+      font-size: 1.5rem;
+    }
+    .subtitle {
+      font-size: 0.9rem;
+    }
+  }
+
+  @media (max-width: 400px) {
+    .header-logo {
+      width: 40px;
+      height: 40px;
+    }
+    .header-left h1 {
+      font-size: 1.3rem;
+    }
+    .subtitle {
+      font-size: 0.8rem;
+    }
+  }
+
+  .header-title-link {
+    text-decoration: none;
+    color: inherit;
   }
 </style> 
