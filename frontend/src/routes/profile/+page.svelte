@@ -1,50 +1,52 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import { browser } from "$app/environment";
+	import { onMount } from "svelte";
+	import { browser } from "$app/environment";
+	import { goto } from "$app/navigation";
 
-  // Интерфейсы для TypeScript
-  interface User {
-    id: number;
-    username: string;
-    email: string;
-    invest_token?: string;
-    telegram_id?: string;
-    tickers?: string;
-    is_active: boolean;
-    created_at: string;
-  }
+	// Интерфейсы для TypeScript
+	interface User {
+		id: number;
+		username: string;
+		email: string;
+		invest_token?: string;
+		telegram_id?: string;
+		tickers?: string;
+		is_active: boolean;
+		created_at: string;
+	}
 
-  interface Balance {
-    account_id: string;
-    balance: number;
-    currency: string;
-  }
+	interface Balance {
+		account_id: string;
+		balance: number;
+		currency: string;
+	}
 
-  interface Company {
-    id: number;
-    ticker: string;
-    company_name: string;
-    link: string;
-    image_url?: string;
-    description?: string;
-    tags?: string;
-  }
+	interface Company {
+		id: number;
+		ticker: string;
+		company_name: string;
+		link: string;
+		image_url?: string;
+		description?: string;
+		tags?: string;
+	}
 
-  // Состояние компонента
-  let userData: User | null = null;
-  let userBalance: Balance | null = null;
-  let availableCompanies: Company[] = [];
-  let userTickers: string[] = [];
-  let isLoading = true;
-  let error: string | null = null;
+	// Состояние компонента
+	let userData: User | null = null;
+	let userBalance: Balance | null = null;
+	let availableCompanies: Company[] = [];
+	let userTickers: string[] = [];
+	let isLoading = true;
+	let error: string | null = null;
 
-  // Формы
-  let newPassword = '';
-  let confirmPassword = '';
-  let newInvestToken = '';
-  let newTelegramId = '';
-  let selectedCompanyId: number | null = null;
+	// Формы
+	let newPassword = "";
+	let confirmPassword = "";
+	let newInvestToken = "";
+	let newTelegramId = "";
+	let selectedCompanyId: number | null = null;
 
+<<<<<<< HEAD
   // Состояние для красивого выбора тикеров
   let searchTerm = '';
   let showCompanyDropdown = false;
@@ -59,109 +61,129 @@
   let isUpdatingToken = false;
   let isUpdatingTelegram = false;
   let isLoadingBalance = false;
+=======
+	// Состояние для обновлений
+	let isUpdatingProfile = false;
+	let isUpdatingToken = false;
+	let isUpdatingTelegram = false;
+	let isLoadingBalance = false;
+>>>>>>> 35ee2eae97cb3ce5893600363e5245973411ff15
 
-  // Загрузка данных пользователя
-  async function loadUserData() {
-    if (!browser) return;
-    
-    try {
-      const response = await fetch('/api/auth/me', {
-        credentials: 'include'
-      });
+	// --- НОВАЯ ЛОГИКА АУТЕНТИФИКАЦИИ ---
 
-      if (response.status === 401) {
-        error = "Необходима авторизация";
-        window.location.href = '/login';
-        return;
-      }
+	function getAuthHeaders(): Record<string, string> {
+		if (!browser) return {};
+		const token = localStorage.getItem("access_token");
+		if (!token) {
+			goto("/login");
+			return {};
+		}
+		return {
+			Authorization: `Bearer ${token}`,
+			"Content-Type": "application/json"
+		};
+	}
 
-      if (!response.ok) {
-        throw new Error('Ошибка загрузки профиля');
-      }
+	async function fetchWithAuth(url: string, options: RequestInit = {}) {
+		const headers = getAuthHeaders();
+		// If headers are empty, it means goto was called, so we shouldn't proceed.
+		if (Object.keys(headers).length === 0 && browser) {
+			// Return a promise that never resolves, as we are navigating away.
+			return new Promise<Response>(() => {});
+		}
 
-      userData = await response.json();
-      console.log('Загружены данные пользователя:', userData);
-    } catch (e: any) {
-      error = e.message || 'Ошибка загрузки профиля';
-      console.error('Ошибка загрузки пользователя:', e);
-    }
-  }
+		const response = await fetch("http://176.124.212.149:8000" + url, {
+			...options,
+			headers: {
+				...headers,
+				...options.headers
+			}
+		});
 
-  // Загрузка баланса
-  async function loadBalance() {
-    if (!browser || !userData?.invest_token) return;
-    
-    isLoadingBalance = true;
-    try {
-      const response = await fetch('/api/invest/sandbox/balance', {
-        credentials: 'include'
-      });
+		if (response.status === 401) {
+			if (browser) {
+				localStorage.removeItem("access_token");
+			}
+			goto("/login");
+			// Return a promise that never resolves, as we are navigating away.
+			return new Promise<Response>(() => {});
+		}
+		return response;
+	}
 
-      if (response.ok) {
-        userBalance = await response.json();
-        console.log('Загружен баланс:', userBalance);
-      } else {
-        console.log('Баланс недоступен (токен не настроен или ошибка API)');
-      }
-    } catch (e: any) {
-      console.error('Ошибка загрузки баланса:', e);
-    } finally {
-      isLoadingBalance = false;
-    }
-  }
+	// --- ОБНОВЛЕННЫЕ ФУНКЦИИ ---
 
-  // Загрузка доступных компаний
-  async function loadAvailableCompanies() {
-    if (!browser) return;
+	// Загрузка данных пользователя
+	async function loadUserData() {
+		try {
+			const response = await fetchWithAuth("/api/auth/me");
+			if (!response.ok) {
+				throw new Error("Ошибка загрузки профиля");
+			}
+			userData = await response.json();
+			console.log("Загружены данные пользователя:", userData);
+		} catch (e: any) {
+			error = e.message || "Ошибка загрузки профиля";
+			console.error("Ошибка загрузки пользователя:", e);
+		}
+	}
 
-    try {
-      const response = await fetch('/api/tradingview/companies?limit=200', {
-        credentials: 'include'
-      });
+	// Загрузка баланса
+	async function loadBalance() {
+		if (!userData?.invest_token) return;
 
-      if (response.ok) {
-        availableCompanies = await response.json();
-        console.log('Загружены компании:', availableCompanies.length);
-      }
-    } catch (e: any) {
-      console.error('Ошибка загрузки компаний:', e);
-    }
-  }
+		isLoadingBalance = true;
+		try {
+			const response = await fetchWithAuth("/api/invest/sandbox/balance");
 
-  // Загрузка тикеров пользователя
-  async function loadUserTickers() {
-    if (!browser) return;
+			if (response.ok) {
+				userBalance = await response.json();
+				console.log("Загружен баланс:", userBalance);
+			} else {
+				console.log("Баланс недоступен (токен не настроен или ошибка API)");
+			}
+		} catch (e: any) {
+			console.error("Ошибка загрузки баланса:", e);
+		} finally {
+			isLoadingBalance = false;
+		}
+	}
 
-    try {
-      const response = await fetch('/api/users/me/tickers', {
-        credentials: 'include'
-      });
+	// Загрузка доступных компаний
+	async function loadAvailableCompanies() {
+		try {
+			const response = await fetchWithAuth("/api/tradingview/companies?limit=200");
 
-      if (response.ok) {
-        const data = await response.json();
-        userTickers = data.tickers ? data.tickers.split(',').map((t: string) => t.trim()).filter((t: string) => t) : [];
-        console.log('Загружены тикеры пользователя:', userTickers);
-      }
-    } catch (e: any) {
-      console.error('Ошибка загрузки тикеров:', e);
-    }
-  }
+			if (response.ok) {
+				availableCompanies = await response.json();
+				console.log("Загружены компании:", availableCompanies.length);
+			}
+		} catch (e: any) {
+			console.error("Ошибка загрузки компаний:", e);
+		}
+	}
 
-  // Обновление токена инвестиций
-  async function updateInvestToken() {
-    if (!newInvestToken.trim()) return;
+	// Загрузка тикеров пользователя
+	async function loadUserTickers() {
+		try {
+			const response = await fetchWithAuth("/api/users/me/tickers");
 
-    isUpdatingToken = true;
-    try {
-      const response = await fetch('/api/auth/me/invest-token', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        credentials: 'include',
-        body: JSON.stringify({ invest_token: newInvestToken })
-      });
+			if (response.ok) {
+				const data = await response.json();
+				userTickers = data.tickers
+					? data.tickers
+							.split(",")
+							.map((t: string) => t.trim())
+							.filter((t: string) => t)
+					: [];
+				console.log("Загружены тикеры пользователя:", userTickers);
+			}
+		} catch (e: any) {
+			console.error("Ошибка загрузки тикеров:", e);
+		}
+	}
 
+<<<<<<< HEAD
       if (response.ok) {
         userData = await response.json();
         newInvestToken = '';
@@ -178,22 +200,36 @@
       isUpdatingToken = false;
     }
   }
+=======
+	// Обновление токена инвестиций
+	async function updateInvestToken() {
+		if (!newInvestToken.trim()) return;
+>>>>>>> 35ee2eae97cb3ce5893600363e5245973411ff15
 
-  // Обновление Telegram ID
-  async function updateTelegramId() {
-    if (!newTelegramId.trim()) return;
+		isUpdatingToken = true;
+		try {
+			const response = await fetchWithAuth("/api/auth/me/invest-token", {
+				method: "PUT",
+				body: JSON.stringify({ invest_token: newInvestToken })
+			});
 
-    isUpdatingTelegram = true;
-    try {
-      const response = await fetch('/api/auth/me/telegram-id', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        credentials: 'include',
-        body: JSON.stringify({ telegram_id: newTelegramId })
-      });
+			if (response.ok) {
+				userData = await response.json();
+				newInvestToken = "";
+				alert("Токен инвестиций обновлен успешно!");
+				await loadBalance();
+			} else {
+				const errorData = await response.json();
+				alert(`Ошибка: ${errorData.detail || "Не удалось обновить токен"}`);
+			}
+		} catch (e: any) {
+			alert(`Ошибка: ${e.message}`);
+		} finally {
+			isUpdatingToken = false;
+		}
+	}
 
+<<<<<<< HEAD
       if (response.ok) {
         userData = await response.json();
         newTelegramId = '';
@@ -297,25 +333,77 @@
       showNotification('error', `Ошибка: ${e.message}`);
     }
   }
+=======
+	// Обновление Telegram ID
+	async function updateTelegramId() {
+		if (!newTelegramId.trim()) return;
 
-  // Инициализация при загрузке компонента
-  onMount(async () => {
-    await loadUserData();
-    if (userData) {
-      await Promise.all([
-        loadBalance(),
-        loadAvailableCompanies(),
-        loadUserTickers()
-      ]);
-    }
-    isLoading = false;
-  });
+		isUpdatingTelegram = true;
+		try {
+			const response = await fetchWithAuth("/api/auth/me/telegram-id", {
+				method: "PUT",
+				body: JSON.stringify({ telegram_id: newTelegramId })
+			});
 
-  // Фильтрация компаний, которые еще не добавлены
-  $: availableToAdd = availableCompanies.filter(company => 
-    !userTickers.includes(company.ticker)
-  );
+			if (response.ok) {
+				userData = await response.json();
+				newTelegramId = "";
+				alert("Telegram ID обновлен успешно!");
+			} else {
+				const errorData = await response.json();
+				alert(`Ошибка: ${errorData.detail || "Не удалось обновить Telegram ID"}`);
+			}
+		} catch (e: any) {
+			alert(`Ошибка: ${e.message}`);
+		} finally {
+			isUpdatingTelegram = false;
+		}
+	}
 
+	// Добавление тикера
+	async function addTicker() {
+		if (!selectedCompanyId) return;
+
+		try {
+			const response = await fetchWithAuth("/api/users/me/tickers", {
+				method: "POST",
+				body: JSON.stringify({ company_id: selectedCompanyId })
+			});
+
+			if (response.ok) {
+				await loadUserTickers();
+				selectedCompanyId = null;
+				alert("Тикер добавлен в избранное!");
+			} else {
+				const errorData = await response.json();
+				alert(`Ошибка: ${errorData.detail || "Не удалось добавить тикер"}`);
+			}
+		} catch (e: any) {
+			alert(`Ошибка: ${e.message}`);
+		}
+	}
+>>>>>>> 35ee2eae97cb3ce5893600363e5245973411ff15
+
+	// Удаление тикера
+	async function removeTicker(ticker: string) {
+		try {
+			const response = await fetchWithAuth(`/api/users/me/tickers/${ticker}`, {
+				method: "DELETE"
+			});
+
+			if (response.ok) {
+				await loadUserTickers();
+				alert("Тикер удален из избранного!");
+			} else {
+				const errorData = await response.json();
+				alert(`Ошибка: ${errorData.detail || "Не удалось удалить тикер"}`);
+			}
+		} catch (e: any) {
+			alert(`Ошибка: ${e.message}`);
+		}
+	}
+
+<<<<<<< HEAD
   // Фильтрация компаний по поиску
   $: filteredCompanies = availableToAdd.filter(company =>
     company.ticker.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -331,124 +419,94 @@
   function getCompanyInfo(ticker: string): Company | undefined {
     return availableCompanies.find(c => c.ticker === ticker);
   }
+=======
+	// Инициализация при загрузке компонента
+	onMount(async () => {
+		if (!browser) return;
+		isLoading = true;
+		await loadUserData();
+		if (userData) {
+			await Promise.all([loadBalance(), loadAvailableCompanies(), loadUserTickers()]);
+		}
+		isLoading = false;
+	});
+>>>>>>> 35ee2eae97cb3ce5893600363e5245973411ff15
 </script>
 
 <main class="profile-container">
-  <div class="profile-header">
-    <h1>Профиль</h1>
-    <a href="/" class="back-button">← Назад</a>
-  </div>
+	{#if isLoading}
+		<div class="loading">Загрузка профиля...</div>
+	{:else if error}
+		<div class="error-message">{error}</div>
+	{:else if userData}
+		<div class="profile-header">
+			<h1>Профиль пользователя</h1>
+			<p>Привет, <span class="username">{userData.username}</span>!</p>
+		</div>
 
-  {#if isLoading}
-    <div class="loading-container">
-      <div class="loading-spinner"></div>
-      <p>Загрузка профиля...</p>
-    </div>
-  {:else if error}
-    <div class="error-container">
-      <p class="error">{error}</p>
-      <a href="/login" class="login-link">Войти в систему</a>
-    </div>
-  {:else if userData}
-    <div class="profile-content">
-      <div class="profile-card">
-        <!-- Информация о пользователе -->
-        <div class="profile-info">
-          <img src="/bik3.png" alt="Profile" class="profile-avatar" />
-          <div class="user-details">
-            <h2>{userData.username}</h2>
-            <p class="email">{userData.email}</p>
-            <p class="registration-date">
-              Зарегистрирован: {new Date(userData.created_at).toLocaleDateString('ru-RU')}
-            </p>
-          </div>
-        </div>
+		<div class="profile-grid">
+			<!-- Personal Data Section -->
+			<div class="profile-card">
+				<h2>Личные данные</h2>
+				<p><strong>ID:</strong> {userData.id}</p>
+				<p><strong>Email:</strong> {userData.email}</p>
+				<p><strong>Активен:</strong> {userData.is_active ? "Да" : "Нет"}</p>
+				<p>
+					<strong>Дата регистрации:</strong>
+					{new Date(userData.created_at).toLocaleDateString()}
+				</p>
+			</div>
 
-        <!-- Баланс -->
-        <div class="balance-section">
-          <h3>Баланс в песочнице</h3>
-          {#if isLoadingBalance}
-            <div class="balance-loading">Загрузка...</div>
-          {:else if userBalance}
-            <div class="balance-amount">
-              {userBalance.currency} {formatBalance(userBalance.balance)}
-            </div>
-            <p class="balance-note">Счет: {userBalance.account_id}</p>
-          {:else if userData.invest_token}
-            <div class="balance-error">Не удалось загрузить баланс</div>
-          {:else}
-            <div class="balance-placeholder">
-              Добавьте токен Tinkoff API для просмотра баланса
-            </div>
-          {/if}
-        </div>
+			<!-- Balance Section -->
+			<div class="profile-card">
+				<h2>Баланс</h2>
+				{#if isLoadingBalance}
+					<p>Загрузка баланса...</p>
+				{:else if userBalance}
+					<p class="balance-amount">{userBalance.balance.toFixed(2)} {userBalance.currency}</p>
+					<p class="account-id">Счет: {userBalance.account_id}</p>
+				{:else}
+					<p>Баланс недоступен. Проверьте ваш токен инвестиций.</p>
+				{/if}
+			</div>
 
-        <!-- Настройки API токена -->
-        <div class="settings-section">
-          <h3>API Токен Tinkoff</h3>
-          <div class="token-section">
-            <div class="current-token">
-              <label>Текущий токен:</label>
-              <div class="token-display">
-                {#if userData.invest_token}
-                  <span class="token-masked">
-                    {userData.invest_token.substring(0, 8)}...{userData.invest_token.slice(-4)}
-                  </span>
-                  <span class="token-status active">Активен</span>
-                {:else}
-                  <span class="token-placeholder">Токен не установлен</span>
-                  <span class="token-status inactive">Не активен</span>
-                {/if}
-              </div>
-            </div>
-            <div class="token-input-section">
-              <input 
-                type="text" 
-                bind:value={newInvestToken} 
-                placeholder="Введите новый токен Tinkoff API"
-                class="token-input"
-                disabled={isUpdatingToken}
-              />
-              <button 
-                on:click={updateInvestToken} 
-                class="update-button"
-                disabled={!newInvestToken.trim() || isUpdatingToken}
-              >
-                {isUpdatingToken ? 'Обновление...' : 'Обновить токен'}
-              </button>
-            </div>
-          </div>
-        </div>
+			<!-- Invest Token Section -->
+			<div class="profile-card">
+				<h2>Токен инвестиций</h2>
+				<p class="token-display">
+					{userData.invest_token ? `****${userData.invest_token.slice(-4)}` : "Не указан"}
+				</p>
+				<div class="form-group">
+					<input
+						type="text"
+						bind:value={newInvestToken}
+						placeholder="Новый токен"
+						disabled={isUpdatingToken}
+					/>
+					<button on:click={updateInvestToken} disabled={isUpdatingToken}>
+						{isUpdatingToken ? "Обновление..." : "Обновить"}
+					</button>
+				</div>
+			</div>
 
-        <!-- Telegram ID -->
-        <div class="settings-section">
-          <h3>Telegram ID</h3>
-          <div class="telegram-section">
-            <div class="current-telegram">
-              <label>Текущий ID:</label>
-              <span class="telegram-display">
-                {userData.telegram_id || 'Не указан'}
-              </span>
-            </div>
-            <div class="telegram-input-section">
-              <input 
-                type="text" 
-                bind:value={newTelegramId} 
-                placeholder="Введите Telegram ID"
-                class="telegram-input"
-                disabled={isUpdatingTelegram}
-              />
-              <button 
-                on:click={updateTelegramId} 
-                class="update-button"
-                disabled={!newTelegramId.trim() || isUpdatingTelegram}
-              >
-                {isUpdatingTelegram ? 'Обновление...' : 'Обновить ID'}
-              </button>
-            </div>
-          </div>
-        </div>
+			<!-- Telegram ID Section -->
+			<div class="profile-card">
+				<h2>Telegram ID</h2>
+				<p class="token-display">{userData.telegram_id || "Не указан"}</p>
+				<div class="form-group">
+					<input
+						type="text"
+						bind:value={newTelegramId}
+						placeholder="Новый Telegram ID"
+						disabled={isUpdatingTelegram}
+					/>
+					<button on:click={updateTelegramId} disabled={isUpdatingTelegram}>
+						{isUpdatingTelegram ? "Обновление..." : "Обновить"}
+					</button>
+				</div>
+			</div>
 
+<<<<<<< HEAD
         <!-- Интересующие тикеры -->
         <div class="tickers-section">
           <h3>Интересующие тикеры</h3>
@@ -1459,3 +1517,199 @@
     }
   }
 </style> 
+=======
+			<!-- Tickers Section -->
+			<div class="profile-card tickers-card">
+				<h2>Избранные тикеры</h2>
+				<div class="ticker-list">
+					{#if userTickers.length > 0}
+						{#each userTickers as ticker}
+							<div class="ticker-item">
+								<span>{ticker}</span>
+								<button class="remove-ticker-btn" on:click={() => removeTicker(ticker)}>×</button>
+							</div>
+						{/each}
+					{:else}
+						<p>У вас пока нет избранных тикеров.</p>
+					{/if}
+				</div>
+				<hr />
+				<h3>Добавить тикер</h3>
+				<div class="form-group">
+					<select bind:value={selectedCompanyId}>
+						<option value={null} disabled>Выберите компанию</option>
+						{#each availableCompanies as company}
+							<option value={company.id}>{company.ticker} - {company.company_name}</option>
+						{/each}
+					</select>
+					<button on:click={addTicker} disabled={!selectedCompanyId}>Добавить</button>
+				</div>
+			</div>
+		</div>
+	{/if}
+</main>
+
+<style>
+	.profile-container {
+		max-width: 1200px;
+		margin: 2rem auto;
+		padding: 2rem;
+		color: #e0e0e0;
+	}
+
+	.loading {
+		text-align: center;
+		font-size: 1.5rem;
+		padding: 4rem;
+	}
+
+	.error-message {
+		color: #f44336;
+		background-color: rgba(244, 67, 54, 0.1);
+		border: 1px solid #f44336;
+		padding: 1rem;
+		border-radius: 8px;
+		text-align: center;
+	}
+
+	.profile-header {
+		text-align: center;
+		margin-bottom: 2rem;
+	}
+
+	.profile-header h1 {
+		color: #ffdd2d;
+		font-size: 2.5rem;
+		margin-bottom: 0.5rem;
+	}
+
+	.profile-header .username {
+		font-weight: 700;
+		color: #ffdd2d;
+	}
+
+	.profile-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+		gap: 1.5rem;
+	}
+
+	.profile-card {
+		background: #242424;
+		padding: 1.5rem;
+		border-radius: 12px;
+		border: 1px solid #333;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.profile-card h2 {
+		color: #ffdd2d;
+		font-size: 1.25rem;
+		margin-bottom: 1rem;
+		border-bottom: 1px solid #444;
+		padding-bottom: 0.5rem;
+	}
+
+	.profile-card p {
+		margin-bottom: 0.5rem;
+		line-height: 1.6;
+	}
+
+	.token-display {
+		font-family: monospace;
+		background-color: #1a1a1a;
+		padding: 0.5rem;
+		border-radius: 4px;
+		word-break: break-all;
+		margin-bottom: 1rem;
+	}
+
+	.form-group {
+		display: flex;
+		gap: 0.5rem;
+		margin-top: auto; /* Pushes form to the bottom */
+	}
+
+	.form-group input,
+	.form-group select {
+		flex-grow: 1;
+		padding: 0.5rem;
+		border: 1px solid #444;
+		border-radius: 4px;
+		background-color: #1a1a1a;
+		color: #e0e0e0;
+		font-size: 1rem;
+	}
+
+	.form-group button {
+		padding: 0.5rem 1rem;
+		border: none;
+		border-radius: 4px;
+		background-color: #ffdd2d;
+		color: #1a1a1a;
+		font-weight: 600;
+		cursor: pointer;
+		transition: background-color 0.2s;
+	}
+
+	.form-group button:disabled {
+		background-color: #555;
+		cursor: not-allowed;
+	}
+
+	.form-group button:hover:not(:disabled) {
+		background-color: #ffe766;
+	}
+
+	.balance-amount {
+		font-size: 2rem;
+		font-weight: 700;
+		color: #ffdd2d;
+	}
+
+	.account-id {
+		font-size: 0.9rem;
+		color: #a0a0a0;
+	}
+
+	.tickers-card {
+		grid-column: span 1 / -1; /* Make this card span full width */
+	}
+
+	.ticker-list {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+		margin-bottom: 1rem;
+	}
+
+	.ticker-item {
+		background-color: #333;
+		padding: 0.5rem 1rem;
+		border-radius: 20px;
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	.remove-ticker-btn {
+		background: none;
+		border: none;
+		color: #a0a0a0;
+		cursor: pointer;
+		font-size: 1.2rem;
+		padding: 0;
+		line-height: 1;
+	}
+	.remove-ticker-btn:hover {
+		color: #ffdd2d;
+	}
+
+	hr {
+		border: none;
+		border-top: 1px solid #444;
+		margin: 1.5rem 0;
+	}
+</style>
+>>>>>>> 35ee2eae97cb3ce5893600363e5245973411ff15

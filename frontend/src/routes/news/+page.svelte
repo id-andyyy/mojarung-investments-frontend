@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  // import Chart from 'chart.js/auto'; // Импортируем Chart.js
+  import Chart from 'chart.js/auto'; // Импортируем Chart.js
 
   // Моковые данные для демонстрации (скопировано из +page.svelte для согласованности)
   const mockNews = [
@@ -127,7 +127,7 @@
     alert(`${action} ${ticker}`);
   }
 
-  // let chartInstance: Chart | null = null;
+  let chartInstance: Chart | null = null;
 
   // Add chat message interface
   interface ChatMessage {
@@ -160,16 +160,17 @@
   }
 
   onMount(() => {
-    // Chart.js initialization code commented out
-    /*
+    // Проверяем, что newsItem.chartData существует и содержит данные
+    
     if (newsItem && newsItem.chartData && newsItem.chartData.length > 0) {
       const ctx = document.getElementById('stockChartCanvas') as HTMLCanvasElement;
       if (ctx) {
+        // Деструктурируем данные для Chart.js
         const labels = newsItem.chartData.map((d: { date: string; }) => new Date(d.date).toLocaleDateString('ru-RU', { month: 'short', day: 'numeric' }));
         const values = newsItem.chartData.map((d: { value: any; }) => d.value);
 
         if (chartInstance) {
-          chartInstance.destroy();
+          chartInstance.destroy(); // Уничтожаем предыдущий экземпляр графика, если он есть
         }
 
         chartInstance = new Chart(ctx, {
@@ -196,24 +197,24 @@
             maintainAspectRatio: false,
             plugins: {
               legend: {
-                display: false
+                display: false // Скрываем легенду
               }
             },
             scales: {
               x: {
                 grid: {
-                  color: '#333'
+                  color: '#333' // Цвет сетки X-оси
                 },
                 ticks: {
-                  color: '#a0a0a0'
+                  color: '#a0a0a0' // Цвет меток X-оси
                 }
               },
               y: {
                 grid: {
-                  color: '#333'
+                  color: '#333' // Цвет сетки Y-оси
                 },
                 ticks: {
-                  color: '#a0a0a0'
+                  color: '#a0a0a0' // Цвет меток Y-оси
                 }
               }
             }
@@ -223,7 +224,6 @@
     } else {
       console.warn("Отсутствуют данные chartData для отрисовки графика.");
     }
-    */
   });
 </script>
 
@@ -345,10 +345,7 @@
 
         <div class="chart-placeholder">
           <h3>График</h3>
-          <div class="chart-stub">
-            <p>График временно недоступен</p>
-            <p class="chart-stub-subtitle">Здесь будет отображаться график динамики цены акций</p>
-          </div>
+          <canvas id="stockChartCanvas"></canvas>
         </div>
       </div>
     </article>
@@ -361,6 +358,17 @@
   :global(body) {
     background-color: #1a1a1a;
     font-family: 'Inter', sans-serif;
+    color: #e0e0e0; /* Устанавливаем глобальный светлый цвет текста */
+  }
+
+  /* Глобальные стили для тегов новостей - для согласованности с главной страницей */
+  :global(.news-tag) {
+    font-weight: 600;
+    color: #ffdd2d !important;
+    background: rgba(255, 221, 45, 0.1) !important;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    white-space: nowrap; /* Добавляем white-space: nowrap */
   }
 
   .news-detail-container {
@@ -458,6 +466,16 @@
     border-radius: 12px;
     border: 1px solid #333;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    color: #e0e0e0; /* Устанавливаем светлый цвет текста по умолчанию для всего блока */
+  }
+
+  .news-detail-card * {
+    color: #e0e0e0 !important; /* Применяем светлый цвет ко всем элементам-потомкам с !important */
+  }
+
+  .news-detail-card p,
+  .news-detail-card li {
+    color: #e0e0e0 !important; /* Дополнительно устанавливаем светлый цвет для p и li с !important */
   }
 
   .news-header {
@@ -476,8 +494,8 @@
 
   .ticker {
     font-weight: 600;
-    color: #ffdd2d;
-    background: rgba(255, 221, 45, 0.1);
+    color: #ffdd2d !important;
+    background: rgba(255, 221, 45, 0.1) !important;
     padding: 0.2rem 0.5rem;
     border-radius: 4px;
     white-space: nowrap;
@@ -486,15 +504,6 @@
   .news-tags {
     display: flex;
     gap: 0.4rem;
-  }
-
-  .news-tag {
-    font-weight: 600;
-    color: #ffdd2d;
-    background: rgba(255, 221, 45, 0.1);
-    padding: 0.2rem 0.5rem;
-    border-radius: 4px;
-    white-space: nowrap;
   }
 
   .sentiment {
@@ -545,7 +554,7 @@
 
   .news-summary {
     font-size: 1rem;
-    color: #a0a0a0;
+    color: #e0e0e0;
     margin-bottom: 1.5rem;
     line-height: 1.6;
   }
@@ -571,7 +580,7 @@
     display: flex;
     align-items: flex-start;
     gap: 0.5rem;
-    color: #ffffff;
+    color: #e0e0e0 !important; /* Устанавливаем светлый цвет для элементов списка с !important */
   }
 
   .key-points li:before {
@@ -713,36 +722,9 @@
     color: #a0a0a0;
   }
 
-  .chart-stub {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 250px;
-    width: 100%;
-    background: rgba(255, 221, 45, 0.05);
-    border-radius: 8px;
-    border: 1px dashed #ffdd2d;
-  }
-
-  .chart-stub p {
-    margin: 0.5rem 0;
+  .chart-placeholder h3 {
     color: #ffdd2d;
-  }
-
-  .chart-stub-subtitle {
-    font-size: 0.9rem;
-    color: #a0a0a0 !important;
-  }
-
-  .full-text {
-    margin-bottom: 1.5rem;
-    line-height: 1.7;
-    color: #e0e0e0;
-  }
-
-  .full-text p {
-    margin-bottom: 1rem;
+    margin-bottom: 1rem; /* Adjust as needed */
   }
 
   /* Стили для Chart.js canvas */
@@ -910,5 +892,16 @@
       right: 1rem;
       bottom: 1rem;
     }
+  }
+
+  .full-text {
+    margin-bottom: 1.5rem;
+    line-height: 1.7;
+    color: #e0e0e0;
+  }
+
+  .full-text p {
+    margin-bottom: 1rem;
+    color: #e0e0e0 !important; /* Устанавливаем светлый цвет для параграфов внутри full-text с !important */
   }
 </style> 

@@ -83,13 +83,21 @@
 			return;
 		}
 
+		const token = browser ? localStorage.getItem("access_token") : null;
+		if (!token) {
+			// No need to log error here, main fetchNews will handle it.
+			return;
+		}
+
 		console.log(`[Rec Fetch] Starting recommendation fetch for news ID: ${newsItem.id}`);
 		try {
 			const url = `http://176.124.212.149:8000/api/assistant/recommendations/news/${newsItem.id}`;
 			console.log(`[Rec Fetch] Fetching from URL: ${url} using POST`);
 			const recResponse = await fetch(url, {
 				method: "POST",
-				credentials: "include"
+				headers: {
+					Authorization: `Bearer ${token}`
+				}
 			});
 
 			console.log(`[Rec Fetch] Response status for news ID ${newsItem.id}: ${recResponse.status}`);
@@ -135,6 +143,17 @@
 	async function fetchNews(mode: "recommendations" | "all") {
 		if (!browser) return;
 
+		const token = localStorage.getItem("access_token");
+
+		if (!token) {
+			error = "Для доступа к новостям необходимо авторизоваться.";
+			isLoading = false;
+			newsItems = [];
+			isLoggedIn = false;
+			console.error("[News Page] Auth token not found in localStorage. User needs to log in.");
+			return;
+		}
+
 		console.log(`[News Page] Fetching news with mode: ${mode}`);
 		isLoading = true;
 		error = null;
@@ -151,17 +170,23 @@
 			console.log(`[News Page] Fetching from URL: ${url}`);
 
 			const response = await fetch(url, {
-				credentials: "include"
+				headers: {
+					Authorization: `Bearer ${token}`
+				}
 			});
 
 			console.log(`[News Page] Response status: ${response.status}`);
 
 			if (response.status === 401) {
-				error = "Для доступа к новостям необходимо авторизоваться.";
+				error = "Ваша сессия истекла. Пожалуйста, войдите снова.";
 				isLoading = false;
 				newsItems = [];
 				isLoggedIn = false;
-				console.error("[News Page] Received 401 Unauthorized. User needs to log in.");
+				// Очищаем невалидный токен
+				localStorage.removeItem("access_token");
+				console.error(
+					"[News Page] Received 401 Unauthorized. Invalid token. User needs to log in."
+				);
 				return;
 			}
 			isLoggedIn = true;
