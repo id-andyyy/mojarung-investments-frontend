@@ -8,67 +8,26 @@
 	let isLoading = true;
 	let error: string | null = null;
 	let showBalance = true;
-	let feedMode: "recommendations" | "all" = "recommendations";
+	let feedMode: "all" | "recommendations" = "all";
 	let isLoggedIn = false;
-
-	// Важные новости за день
-	const importantNews = [
-		{
-			id: 101,
-			title: "ЦБ РФ повысил ключевую ставку до 16%",
-			impact: "high",
-			ticker: "SBER",
-			tags: ["монетарная политика", "процентные ставки"]
-		},
-		{
-			id: 102,
-			title: "Минфин объявил о выпуске ОФЗ с доходностью 15%",
-			impact: "high",
-			ticker: "OFZ",
-			tags: ["облигации", "госдолг"]
-		},
-		{
-			id: 103,
-			title: "Роснефть подписала контракт на поставку нефти в Индию",
-			impact: "medium",
-			ticker: "ROSN",
-			tags: ["нефть", "экспорт"]
-		},
-		{
-			id: 104,
-			title: "Сбербанк запускает новую программу лояльности",
-			impact: "medium",
-			ticker: "SBER",
-			tags: ["банки", "розничный бизнес"]
-		},
-		{
-			id: 105,
-			title: "Яндекс представил новый сервис для бизнеса",
-			impact: "medium",
-			ticker: "YNDX",
-			tags: ["технологии", "B2B"]
-		},
-		{
-			id: 106,
-			title: "Газпром увеличивает поставки в Китай",
-			impact: "high",
-			ticker: "GAZP",
-			tags: ["газ", "экспорт"]
-		},
-		{
-			id: 107,
-			title: "Тинькофф запускает платформу для инвестиций в стартапы",
-			impact: "medium",
-			ticker: "TCSG",
-			tags: ["финтех", "стартапы", "инвестиции"]
-		}
-	];
+	let userBalance: { balance: number; currency: string } | null = null;
+	let isBalanceLoading = false;
+	let importantNews: any[] = [];
+	let isImportantNewsLoading = true;
 
 	// Показывать всегда 7 карточек (седьмая всегда заполнена)
-	$: visibleStories = [
-		...importantNews.slice(0, 6),
-		importantNews[6] ? importantNews[6] : { title: "Нет важных новостей", tags: [], ticker: "" }
-	];
+	$: visibleStories = (() => {
+		const stories = importantNews.slice(0, 7);
+		while (stories.length < 7) {
+			stories.push({
+				id: -(stories.length + 1), // unique negative id for keys
+				title: "Больше новостей за 24 часа нет",
+				ticker: null,
+				tags: []
+			});
+		}
+		return stories;
+	})();
 
 	async function fetchAndApplyRecommendation(newsItem: any) {
 		// Only fetch recommendation if a ticker exists
@@ -163,7 +122,7 @@
 				top: "20"
 			});
 			if (mode === "recommendations") {
-				params.append("filter", "true");
+				params.append("filter", "True");
 			}
 
 			const url = `http://176.124.212.149:8000/api/news/?${params.toString()}`;
@@ -190,6 +149,8 @@
 				return;
 			}
 			isLoggedIn = true;
+			fetchBalance();
+			fetchImportantNews();
 
 			if (!response.ok) {
 				const errorData = await response
@@ -305,6 +266,75 @@
 			performInteraction(newsId, "dislike", "disliked");
 		}
 	}
+
+	async function fetchBalance() {
+		if (!browser) return;
+		const token = localStorage.getItem("access_token");
+		if (!token) return; // Should not happen if called correctly
+
+		isBalanceLoading = true;
+		try {
+			const response = await fetch("http://176.124.212.149:8000/api/invest/sandbox/balance", {
+				headers: {
+					Authorization: `Bearer ${token}`
+				}
+			});
+
+			if (response.ok) {
+				const data = await response.json();
+				userBalance = { balance: data.balance, currency: data.currency };
+			} else {
+				console.error("Failed to fetch balance:", await response.text());
+				userBalance = null; // Reset on failure
+			}
+		} catch (e) {
+			console.error("Error fetching balance:", e);
+			userBalance = null;
+		} finally {
+			isBalanceLoading = false;
+		}
+	}
+
+	async function fetchImportantNews() {
+		if (!browser) return;
+		const token = localStorage.getItem("access_token");
+		if (!token) {
+			isImportantNewsLoading = false;
+			return;
+		}
+		isImportantNewsLoading = true;
+		try {
+			const response = await fetch("http://176.124.212.149:8000/api/news/latest-24h", {
+				headers: { Authorization: `Bearer ${token}` }
+			});
+
+			if (response.ok) {
+				const data = await response.json();
+				// Shuffle array (Fisher-Yates)
+				for (let i = data.length - 1; i > 0; i--) {
+					const j = Math.floor(Math.random() * (i + 1));
+					[data[i], data[j]] = [data[j], data[i]];
+				}
+
+				const randomSample = data.slice(0, 7);
+
+				importantNews = randomSample.map((item: any) => ({
+					id: item.id,
+					title: item.title,
+					ticker: item.tickers?.split(",")[0].trim() || null,
+					tags: item.tags ? item.tags.split(",").map((t: string) => t.trim()) : []
+				}));
+			} else {
+				console.error("Failed to fetch important news");
+				importantNews = [];
+			}
+		} catch (e) {
+			console.error("Error fetching important news:", e);
+			importantNews = [];
+		} finally {
+			isImportantNewsLoading = false;
+		}
+	}
 </script>
 
 <main class="container">
@@ -327,7 +357,17 @@
 						<span class="balance-label">Баланс:</span>
 						<span class="balance-amount">
 							{#if showBalance}
-								₽ 1,234,567
+								{#if isBalanceLoading}
+									<span class="balance-loading">Загрузка...</span>
+								{:else if userBalance}
+									{userBalance.balance.toLocaleString("ru-RU", {
+										style: "currency",
+										currency: userBalance.currency.toUpperCase(),
+										minimumFractionDigits: 2
+									})}
+								{:else}
+									<span class="balance-error">Ошибка</span>
+								{/if}
 							{:else}
 								<span class="balance-stars">***</span>
 							{/if}
@@ -388,34 +428,38 @@
 
 	<div class="important-news-section">
 		<h2>Важные новости за день</h2>
-		<div class="important-news-stories">
-			{#each visibleStories as news}
-				<div class="important-news-story">
-					<div class="story-preview">
-						<div class="story-preview-content">
-							<h3 class="story-title">{news.title}</h3>
-							<div class="story-tags">
-								{#if news.ticker}<span class="story-tag">{news.ticker}</span>{/if}
-								{#each news.tags as tag}
-									<span class="story-tag">{tag}</span>
-								{/each}
+		{#if isImportantNewsLoading}
+			<div class="loading">Загрузка...</div>
+		{:else if importantNews.length === 0}
+			<div class="no-news-placeholder">Нет важных новостей за последние 24 часа.</div>
+		{:else}
+			<div class="important-news-stories">
+				{#each visibleStories as news}
+					<div class="important-news-story">
+						<div class="story-preview">
+							<div class="story-preview-content">
+								<h3 class="story-title">{news.title}</h3>
+								<div class="story-tags">
+									{#if news.ticker}<span class="story-tag">{news.ticker}</span>{/if}
+									{#each news.tags as tag}
+										<span class="story-tag">{tag}</span>
+									{/each}
+								</div>
 							</div>
 						</div>
 					</div>
-				</div>
-			{/each}
-		</div>
+				{/each}
+			</div>
+		{/if}
 	</div>
 
 	<div class="content">
 		<aside class="sidebar">
 			<div class="feed-mode-toggle">
+				<button class:active={feedMode === "all"} on:click={() => (feedMode = "all")}>Лента</button>
 				<button
 					class:active={feedMode === "recommendations"}
 					on:click={() => (feedMode = "recommendations")}>Рекомендации</button
-				>
-				<button class:active={feedMode === "all"} on:click={() => (feedMode = "all")}
-					>Вся лента</button
 				>
 			</div>
 			<div class="ticker-selector">
@@ -695,6 +739,16 @@
 		font-size: 1.3rem;
 		letter-spacing: 0.2em;
 		font-weight: 600;
+	}
+
+	.balance-loading,
+	.balance-error {
+		font-size: 1.1rem;
+		font-style: italic;
+		color: #a0a0a0;
+	}
+	.balance-error {
+		color: #f44336;
 	}
 
 	.balance-eye {
@@ -1037,10 +1091,36 @@
 
 	.sentiment.positive .sentiment-circle {
 		background-color: #4caf50;
+		animation: pulse-positive 1.5s infinite;
 	}
 
 	.sentiment.negative .sentiment-circle {
 		background-color: #f44336;
+		animation: pulse-negative 1.5s infinite;
+	}
+
+	@keyframes pulse-positive {
+		0% {
+			box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7);
+		}
+		70% {
+			box-shadow: 0 0 0 10px rgba(76, 175, 80, 0);
+		}
+		100% {
+			box-shadow: 0 0 0 0 rgba(76, 175, 80, 0);
+		}
+	}
+
+	@keyframes pulse-negative {
+		0% {
+			box-shadow: 0 0 0 0 rgba(244, 67, 54, 0.7);
+		}
+		70% {
+			box-shadow: 0 0 0 10px rgba(244, 67, 54, 0);
+		}
+		100% {
+			box-shadow: 0 0 0 0 rgba(244, 67, 54, 0);
+		}
 	}
 
 	.loading {
@@ -1419,5 +1499,14 @@
 	}
 	.login-header-button:hover {
 		opacity: 0.9;
+	}
+
+	.no-news-placeholder {
+		text-align: center;
+		padding: 2rem;
+		color: #a0a0a0;
+		background: #242424;
+		border-radius: 8px;
+		border: 1px solid #333;
 	}
 </style>
