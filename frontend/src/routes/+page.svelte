@@ -9,6 +9,10 @@
 	let error: string | null = null;
 	let showBalance = true;
 	let feedMode: "recommendations" | "all" = "recommendations";
+	
+	// Состояние баланса
+	let userBalance: any = null;
+	let isLoadingBalance = false;
 
 	// Важные новости за день
 	const importantNews = [
@@ -144,6 +148,40 @@
 
 	$: fetchNews(feedMode);
 
+	// Загрузка баланса пользователя
+	async function loadUserBalance() {
+		if (!browser) return;
+		
+		isLoadingBalance = true;
+		try {
+			const response = await fetch('/api/invest/sandbox/balance', {
+				credentials: 'include'
+			});
+
+			if (response.ok) {
+				userBalance = await response.json();
+				console.log('Загружен баланс:', userBalance);
+			} else {
+				console.log('Баланс недоступен (пользователь не авторизован или токен не настроен)');
+			}
+		} catch (e: any) {
+			console.error('Ошибка загрузки баланса:', e);
+		} finally {
+			isLoadingBalance = false;
+		}
+	}
+
+	// Форматирование баланса
+	function formatBalance(balance: number): string {
+		return new Intl.NumberFormat('ru-RU').format(Math.round(balance));
+	}
+
+	// Загрузка баланса при инициализации
+	import { onMount } from 'svelte';
+	onMount(() => {
+		loadUserBalance();
+	});
+
 	function handleTickerSelect(ticker: string) {
 		if (selectedTickers.includes(ticker)) {
 			selectedTickers = selectedTickers.filter(t => t !== ticker);
@@ -171,8 +209,12 @@
 				<div class="balance">
 					<span class="balance-label">Баланс:</span>
 					<span class="balance-amount">
-						{#if showBalance}
-							₽ 1,234,567
+						{#if isLoadingBalance}
+							<span class="balance-loading">Загрузка...</span>
+						{:else if showBalance && userBalance}
+							{userBalance.currency} {formatBalance(userBalance.balance)}
+						{:else if showBalance && !userBalance}
+							<span class="balance-placeholder">Не доступен</span>
 						{:else}
 							<span class="balance-stars">***</span>
 						{/if}
@@ -509,6 +551,18 @@
 		font-size: 1.3rem;
 		letter-spacing: 0.2em;
 		font-weight: 600;
+	}
+
+	.balance-loading {
+		color: #a0a0a0;
+		font-size: 1.1rem;
+		font-style: italic;
+	}
+
+	.balance-placeholder {
+		color: #666;
+		font-size: 1.1rem;
+		font-style: italic;
 	}
 
 	.balance-eye {
