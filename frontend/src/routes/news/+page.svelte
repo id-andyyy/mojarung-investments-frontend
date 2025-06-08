@@ -353,6 +353,7 @@
 </main>
 
 <style>
+  
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
 
   :global(body) {
@@ -360,16 +361,9 @@
     font-family: 'Inter', sans-serif;
     color: #e0e0e0; /* Устанавливаем глобальный светлый цвет текста */
   }
+  
 
-  /* Глобальные стили для тегов новостей - для согласованности с главной страницей */
-  :global(.news-tag) {
-    font-weight: 600;
-    color: #ffdd2d !important;
-    background: rgba(255, 221, 45, 0.1) !important;
-    padding: 0.2rem 0.5rem;
-    border-radius: 4px;
-    white-space: nowrap; /* Добавляем white-space: nowrap */
-  }
+
 
   .news-detail-container {
     max-width: 98%;
@@ -495,7 +489,7 @@
   .ticker {
     font-weight: 600;
     color: #ffdd2d !important;
-    background: rgba(255, 221, 45, 0.1) !important;
+    background: #3d3d3d !important; /* Сплошной темный фон, как на изображении */
     padding: 0.2rem 0.5rem;
     border-radius: 4px;
     white-space: nowrap;
@@ -504,6 +498,15 @@
   .news-tags {
     display: flex;
     gap: 0.4rem;
+  }
+
+  .news-tag {
+    font-weight: 600;
+    color: #ffdd2d !important; /* Желтый текст, как у тикера */
+    background: #3d3d3d !important; /* Сплошной темный фон, как у тикера */
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    white-space: nowrap;
   }
 
   .sentiment {
@@ -536,13 +539,11 @@
   .time {
     color: #a0a0a0;
     font-size: 0.8rem;
-    white-space: nowrap;
   }
 
   .source {
     color: #a0a0a0;
     font-size: 0.8rem;
-    white-space: nowrap;
   }
 
   .news-detail-title {
@@ -695,7 +696,7 @@
   .action-button {
     padding: 0.8rem 2rem;
     background-color: #ffdd2d;
-    color: #1a1a1a;
+    color: #1a1a1a !important; /* Устанавливаем черный цвет текста */
     border: none;
     border-radius: 25px;
     font-size: 1rem;
