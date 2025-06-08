@@ -364,10 +364,18 @@
 
 		isLoading = false;
 	});
+
+	// Logout function
+	function logout() {
+		if (browser) {
+			localStorage.removeItem("access_token");
+			goto("/login");
+		}
+	}
 </script>
 
 <main class="profile-container">
-	<a href="/news" class="back-button">← Назад</a>
+	<a href="/" class="back-button">← Назад</a>
 	{#if isLoading}
 		<div class="loading">Загрузка профиля...</div>
 	{:else if error}
@@ -378,8 +386,11 @@
 			<div class="profile-summary">
 				<img src="/bik3.png" alt="User Avatar" class="profile-avatar-img" />
 				<div class="user-details">
-					<h1>{userData.username}</h1>
-					<p>{userData.email}</p>
+					<div class="user-text">
+						<h1>{userData.username}</h1>
+						<p>{userData.email}</p>
+					</div>
+					<button on:click={logout} class="logout-profile-button">Выйти</button>
 				</div>
 			</div>
 
@@ -615,6 +626,17 @@
 		flex-shrink: 0;
     background-size: cover; 
     padding: 5px;
+	}
+
+	.user-details {
+		display: flex;
+		align-items: center;
+		flex-grow: 1; /* Allow user-details to take available space */
+		gap: 1rem; /* Spacing between user-text and button */
+	}
+
+	.user-text {
+		/* Removed flex-grow: 1 to prevent pushing button to far right */
 	}
 
 	.user-details h1 {
@@ -915,6 +937,25 @@
 		color: #ffffff;
 	}
 
+	.logout-profile-button {
+		padding: 0.5rem 1rem;
+		border: 1px solid #555;
+		border-radius: 6px;
+		background-color: #333;
+		color: #e0e0e0;
+		font-weight: 600;
+		font-size: 0.85rem;
+		cursor: pointer;
+		transition: background-color 0.2s, border-color 0.2s, color 0.2s;
+    margin-bottom: 4%;
+	}
+
+	.logout-profile-button:hover {
+		background-color: #444;
+		border-color: #777;
+		color: #ffffff;
+	}
+
 	/* Responsive adjustments */
 	@media (max-width: 768px) {
 		.profile-container {
@@ -963,6 +1004,10 @@
 		.add-tag-button {
 			width: 100%;
 			border-radius: 6px;
+		}
+
+		.logout-profile-button {
+			margin-top: 0.5rem;
 		}
 	}
 

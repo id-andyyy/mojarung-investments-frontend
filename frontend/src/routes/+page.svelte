@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { browser } from "$app/environment";
 	import { api } from "$lib/api";
+	/* import { goto } from "$app/navigation"; */
 
 	// Состояние приложения
 	let selectedTickers: string[] = [];
@@ -305,6 +306,15 @@
 			performInteraction(newsId, "dislike", "disliked");
 		}
 	}
+
+	// Logout function for the main page
+	/* function logout() {
+		if (browser) {
+			localStorage.removeItem("access_token");
+			isLoggedIn = false; // Update reactivity
+			goto("/login");
+		}
+	} */
 </script>
 
 <main class="container">
@@ -370,8 +380,6 @@
 							{/if}
 						</button>
 					</div>
-				{/if}
-				{#if isLoggedIn}
 					<a href="/profile" class="profile-button">
 						<img
 							src="https://avatars.mds.yandex.net/i?id=dfb57f6793d9a8a2575c240be885d79e_l-4538910-images-thumbs&n=13"
@@ -1419,5 +1427,378 @@
 	}
 	.login-header-button:hover {
 		opacity: 0.9;
+	}
+
+	.logout-header-button {
+		padding: 0.5rem 1rem;
+		border: 1px solid #555;
+		border-radius: 6px;
+		background-color: #333;
+		color: #e0e0e0;
+		font-weight: 600;
+		font-size: 0.9rem;
+		cursor: pointer;
+		transition: background-color 0.2s, border-color 0.2s, color 0.2s;
+		margin-left: 10px; /* Spacing between profile/login and logout */
+	}
+
+	.logout-header-button:hover {
+		background-color: #444;
+		border-color: #777;
+		color: #ffffff;
+	}
+
+	/* Styles for News Feed */
+	.news-feed {
+		flex: 3;
+		background-color: #1a1a1a;
+		padding: 20px;
+		border-radius: 8px;
+		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+	}
+
+	.loading,
+	.error {
+		text-align: center;
+		padding: 2rem;
+		font-size: 1.2rem;
+		color: #e0e0e0;
+	}
+
+	.error {
+		color: #f44336;
+	}
+
+	.news-card-link {
+		text-decoration: none;
+		color: inherit;
+	}
+
+	.news-card {
+		background-color: #242424;
+		border: 1px solid #333;
+		border-radius: 8px;
+		margin-bottom: 1.5rem;
+		padding: 1rem;
+		transition: transform 0.2s, box-shadow 0.2s;
+	}
+
+	.news-card:hover {
+		transform: translateY(-3px);
+		box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+	}
+
+	.news-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: flex-start;
+		margin-bottom: 0.8rem;
+	}
+
+	.news-meta {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+	}
+
+	.news-tags {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+	}
+
+	.news-tag {
+		background-color: rgba(255, 221, 45, 0.15);
+		color: #ffdd2d;
+		padding: 0.3rem 0.6rem;
+		border-radius: 4px;
+		font-size: 0.75rem;
+		font-weight: 500;
+		white-space: nowrap;
+	}
+
+	.news-right {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-end;
+		font-size: 0.85rem;
+		color: #a0a0a0;
+	}
+
+	.source-time-sentiment {
+		display: flex;
+		align-items: center;
+		gap: 0.8rem;
+	}
+
+	.source {
+		font-weight: 500;
+	}
+
+	.time {
+		font-size: 0.8rem;
+	}
+
+	.sentiment {
+		display: flex;
+		align-items: center;
+		gap: 0.3rem;
+	}
+
+	.sentiment-circle {
+		width: 8px;
+		height: 8px;
+		border-radius: 50%;
+	}
+
+	.sentiment.positive .sentiment-circle {
+		background-color: #4caf50;
+	}
+
+	.sentiment.negative .sentiment-circle {
+		background-color: #f44336;
+	}
+
+	.percentage-change {
+		font-weight: 600;
+		font-size: 0.9rem;
+	}
+
+	.percentage-change.positive {
+		color: #4caf50;
+	}
+
+	.percentage-change.negative {
+		color: #f44336;
+	}
+
+	.news-content h3 {
+		font-size: 1.25rem;
+		color: #ffffff;
+		margin-bottom: 0.5rem;
+		line-height: 1.4;
+	}
+
+	.news-summary {
+		color: #b0b0b0;
+		line-height: 1.6;
+		margin-bottom: 1rem;
+	}
+
+	.news-keywords {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.4rem;
+		margin-bottom: 1rem;
+	}
+
+	.keyword-tag {
+		background-color: #333;
+		color: #e0e0e0;
+		padding: 0.2rem 0.5rem;
+		border-radius: 4px;
+		font-size: 0.8rem;
+	}
+
+	.news-actions {
+		display: flex;
+		gap: 1rem;
+		border-top: 1px solid #333;
+		padding-top: 1rem;
+		margin-top: 1rem;
+	}
+
+	.action-button {
+		background: none;
+		border: none;
+		color: #a0a0a0;
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+		font-size: 0.9rem;
+		transition: color 0.2s;
+	}
+
+	.action-button:hover {
+		color: #ffffff;
+	}
+
+	.action-button.liked {
+		color: #4caf50;
+	}
+
+	.action-button.disliked {
+		color: #f44336;
+	}
+
+	.action-button svg {
+		width: 18px;
+		height: 18px;
+	}
+
+	.recommendation-section {
+		margin-top: 1.5rem;
+		background-color: #2a2a2a;
+		border-left: 4px solid #ffdd2d;
+		padding: 1rem;
+		border-radius: 4px;
+	}
+
+	.recommendation-section.buy {
+		border-color: #4caf50;
+	}
+
+	.recommendation-section.sell {
+		border-color: #f44336;
+	}
+
+	.recommendation-section h4 {
+		color: #ffdd2d;
+		margin-bottom: 0.5rem;
+		font-size: 1rem;
+	}
+
+	.recommendation-section.buy h4 {
+		color: #4caf50;
+	}
+
+	.recommendation-section.sell h4 {
+		color: #f44336;
+	}
+
+	.recommendation-section p {
+		color: #e0e0e0;
+		font-size: 0.9rem;
+		line-height: 1.5;
+	}
+
+	.recommendation-section .confidence {
+		font-weight: 600;
+	}
+
+	.recommendation-section .loading-rec {
+		font-style: italic;
+		color: #a0a0a0;
+	}
+
+	.news-image {
+		width: 100%;
+		height: 200px;
+		object-fit: cover;
+		border-radius: 8px;
+		margin-bottom: 1rem;
+	}
+
+	/* Global styles for specific elements on news page */
+	/* :global(.news-tag) { /* Commented out as per previous instruction */
+	/* background-color: rgba(255, 221, 45, 0.15) !important;
+		color: #ffdd2d !important;
+		padding: 0.3rem 0.6rem !important;
+		border-radius: 4px !important;
+		font-size: 0.75rem !important;
+		font-weight: 500 !important;
+		white-space: nowrap !important; */
+	/* }
+
+	:global(.ticker) { /* Commented out as per previous instruction */
+	/* background-color: rgba(255, 221, 45, 0.15) !important;
+		color: #ffdd2d !important;
+		padding: 0.3rem 0.6rem !important;
+		border-radius: 4px !important;
+		font-size: 0.75rem !important;
+		font-weight: 500 !important;
+		white-space: nowrap !important; */
+	/* }
+
+	/* Responsive adjustments for news feed */
+	@media (max-width: 768px) {
+		.header-content {
+			flex-direction: column;
+			align-items: flex-start;
+			gap: 1rem;
+		}
+
+		.profile-section {
+			flex-direction: column;
+			align-items: flex-start;
+			width: 100%;
+			gap: 0.5rem;
+		}
+
+		.balance {
+			width: 100%;
+			justify-content: space-between;
+		}
+
+		.profile-button,
+		.login-header-button {
+			width: 100%;
+			text-align: center;
+		}
+
+		.important-news-stories {
+			grid-template-columns: 1fr;
+		}
+
+		.content {
+			flex-direction: column;
+		}
+
+		.sidebar {
+			order: 2;
+			width: 100%;
+		}
+
+		.news-feed {
+			order: 1;
+			width: 100%;
+		}
+	}
+
+	@media (max-width: 480px) {
+		.header-title-link .title-text h1 {
+			font-size: 1.5rem;
+		}
+
+		.header-title-link .subtitle {
+			font-size: 0.8rem;
+		}
+
+		.feed-mode-toggle button {
+			font-size: 0.9rem;
+			padding: 0.6rem 1rem;
+		}
+
+		.ticker-selector h3,
+		.sources h3 {
+			font-size: 1.1rem;
+		}
+
+		.news-card {
+			padding: 0.8rem;
+		}
+
+		.news-content h3 {
+			font-size: 1.1rem;
+		}
+
+		.news-summary {
+			font-size: 0.85rem;
+		}
+
+		.action-button {
+			font-size: 0.8rem;
+		}
+
+		.news-right {
+			font-size: 0.75rem;
+		}
+
+		/* .logout-header-button {
+			margin-left: 0;
+			margin-top: 5px;
+			width: 100%;
+		} */
 	}
 </style>
