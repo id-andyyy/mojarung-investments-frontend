@@ -14,6 +14,22 @@
 	let isBalanceLoading = false;
 	let importantNews: any[] = [];
 	let isImportantNewsLoading = true;
+	let selectedTags: string[] = [];
+
+	$: availableTickers = Array.from(
+		new Set(newsItems.map(item => item.ticker).filter((t): t is string => !!t))
+	).sort();
+
+	$: availableTags = Array.from(new Set(newsItems.flatMap(item => item.tags))).sort();
+
+	// A new reactive variable for the displayed news, filtered from the master list.
+	$: filteredNewsItems = newsItems.filter(item => {
+		const tickerMatch =
+			selectedTickers.length === 0 || (item.ticker && selectedTickers.includes(item.ticker));
+		const tagMatch =
+			selectedTags.length === 0 || item.tags.some((tag: string) => selectedTags.includes(tag));
+		return tickerMatch && tagMatch;
+	});
 
 	// Показывать всегда 7 карточек (седьмая всегда заполнена)
 	$: visibleStories = (() => {
@@ -208,6 +224,14 @@
 			selectedTickers = selectedTickers.filter(t => t !== ticker);
 		} else {
 			selectedTickers = [...selectedTickers, ticker];
+		}
+	}
+
+	function handleTagSelect(tag: string) {
+		if (selectedTags.includes(tag)) {
+			selectedTags = selectedTags.filter(t => t !== tag);
+		} else {
+			selectedTags = [...selectedTags, tag];
 		}
 	}
 
@@ -465,7 +489,7 @@
 			<div class="ticker-selector">
 				<h3>Выберите тикеры</h3>
 				<div class="ticker-list">
-					{#each ["LKOH", "SBER", "GAZP", "YNDX", "TCSG"] as ticker}
+					{#each availableTickers as ticker}
 						<button
 							class="ticker-button"
 							class:selected={selectedTickers.includes(ticker)}
@@ -478,17 +502,17 @@
 			</div>
 
 			<div class="sources">
-				<h3>Источники</h3>
-				<div class="source-list">
-					<label class="source-item">
-						<input type="checkbox" checked /> РБК
-					</label>
-					<label class="source-item">
-						<input type="checkbox" checked /> Интерфакс
-					</label>
-					<label class="source-item">
-						<input type="checkbox" checked /> Ведомости
-					</label>
+				<h3>Теги</h3>
+				<div class="ticker-list">
+					{#each availableTags as tag}
+						<button
+							class="ticker-button"
+							class:selected={selectedTags.includes(tag)}
+							on:click={() => handleTagSelect(tag)}
+						>
+							{tag}
+						</button>
+					{/each}
 				</div>
 			</div>
 		</aside>
@@ -498,8 +522,8 @@
 				<div class="loading">Загрузка новостей...</div>
 			{:else if error}
 				<div class="error">{error}</div>
-			{:else}
-				{#each newsItems as news}
+			{:else if filteredNewsItems.length > 0}
+				{#each filteredNewsItems as news}
 					<a href="/news/{news.id}" class="news-card-link">
 						<article class="news-card">
 							<div class="news-header">
@@ -644,6 +668,8 @@
 						</article>
 					</a>
 				{/each}
+			{:else}
+				<div class="no-news-placeholder">Новостей нет, попробуйте изменить фильтры</div>
 			{/if}
 		</section>
 	</div>
