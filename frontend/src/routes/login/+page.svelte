@@ -251,4 +251,18 @@
 			font-size: 1.75rem;
 		}
 	}
+
+	.header-content {
+		max-width: 1200px;
+		margin: 0 auto;
+		display: flex;
+		justify-content: flex-start; /* Align content to the left */
+		align-items: center;
+	}
+
+	.header-left {
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+	}
 </style>
