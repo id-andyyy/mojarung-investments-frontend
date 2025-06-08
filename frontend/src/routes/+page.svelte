@@ -223,7 +223,10 @@
 					quantity: 0
 				},
 				tags: item.tags ? item.tags.split(",").map((t: string) => t.trim()) : [],
-				percentageChange: parseFloat((Math.random() * 2.5 * (item.is_positive ? 1 : -1)).toFixed(1))
+				percentageChange: parseFloat(
+					(Math.random() * 2.5 * (item.is_positive ? 1 : -1)).toFixed(1)
+				),
+				user_interaction: null
 			}));
 
 			// 2. Asynchronously fetch recommendations for each item
@@ -244,6 +247,62 @@
 			selectedTickers = selectedTickers.filter(t => t !== ticker);
 		} else {
 			selectedTickers = [...selectedTickers, ticker];
+		}
+	}
+
+	async function performInteraction(
+		newsId: number,
+		action: "like" | "dislike",
+		newInteractionState: "liked" | "disliked" | null
+	) {
+		if (!browser) return;
+		const token = localStorage.getItem("access_token");
+		if (!token) {
+			alert("Для этого действия необходимо авторизоваться.");
+			return;
+		}
+
+		const item = newsItems.find(i => i.id === newsId);
+		if (!item) return;
+
+		try {
+			const response = await fetch(`http://176.124.212.149:8000/api/users/me/${action}`, {
+				method: "POST",
+				headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+				body: JSON.stringify({ news_id: newsId })
+			});
+
+			if (response.ok) {
+				item.user_interaction = newInteractionState;
+				newsItems = [...newsItems];
+			} else {
+				const errorData = await response.json();
+				alert(`Ошибка: ${errorData.detail || "Не удалось выполнить действие"}`);
+			}
+		} catch (e) {
+			alert("Ошибка сети при выполнении действия.");
+		}
+	}
+
+	function handleLikeClick(newsId: number) {
+		const item = newsItems.find(i => i.id === newsId);
+		if (!item) return;
+
+		if (item.user_interaction === "liked") {
+			performInteraction(newsId, "dislike", null);
+		} else {
+			performInteraction(newsId, "like", "liked");
+		}
+	}
+
+	function handleDislikeClick(newsId: number) {
+		const item = newsItems.find(i => i.id === newsId);
+		if (!item) return;
+
+		if (item.user_interaction === "disliked") {
+			performInteraction(newsId, "like", null);
+		} else {
+			performInteraction(newsId, "dislike", "disliked");
 		}
 	}
 </script>
@@ -476,56 +535,68 @@
 											>Уверенность: {news.recommendation.confidence}%</span
 										>
 										<p class="reasoning">{news.recommendation.reasoning}</p>
-										<div class="action-buttons">
-											<button class="action-button"
-												>{#if news.recommendation.action === "buy"}
-													Купить {news.recommendation.quantity} {news.recommendation.ticker}
-												{:else if news.recommendation.action === "sell"}
-													Продать {news.recommendation.quantity} {news.recommendation.ticker}
-												{:else}
-													Держать {news.ticker}
-												{/if}</button
-											>
-											<div class="news-actions">
-												<button class="action-icon like">
-													<svg
-														xmlns="http://www.w3.org/2000/svg"
-														width="20"
-														height="20"
-														viewBox="0 0 24 24"
-														fill="none"
-														stroke="currentColor"
-														stroke-width="2"
-														stroke-linecap="round"
-														stroke-linejoin="round"
-													>
-														<path
-															d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"
-														></path>
-													</svg>
-												</button>
-												<button class="action-icon dislike">
-													<svg
-														xmlns="http://www.w3.org/2000/svg"
-														width="20"
-														height="20"
-														viewBox="0 0 24 24"
-														fill="none"
-														stroke="currentColor"
-														stroke-width="2"
-														stroke-linecap="round"
-														stroke-linejoin="round"
-													>
-														<path
-															d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"
-														></path>
-													</svg>
-												</button>
-											</div>
-										</div>
 									{/if}
 								</div>
 							{/if}
+							<div class="action-buttons">
+								<div class="trade-button-container">
+									{#if news.ticker && !news.recommendation.isLoading}
+										<button class="action-button"
+											>{#if news.recommendation.action === "buy"}
+												Купить {news.recommendation.quantity} {news.recommendation.ticker}
+											{:else if news.recommendation.action === "sell"}
+												Продать {news.recommendation.quantity} {news.recommendation.ticker}
+											{:else}
+												Держать {news.ticker}
+											{/if}</button
+										>
+									{/if}
+								</div>
+								<div class="news-actions">
+									<button
+										class="action-icon like"
+										class:active={news.user_interaction === "liked"}
+										on:click|preventDefault|stopPropagation={() => handleLikeClick(news.id)}
+									>
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											width="20"
+											height="20"
+											viewBox="0 0 24 24"
+											fill="none"
+											stroke="currentColor"
+											stroke-width="2"
+											stroke-linecap="round"
+											stroke-linejoin="round"
+										>
+											<path
+												d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"
+											></path>
+										</svg>
+									</button>
+									<button
+										class="action-icon dislike"
+										class:active={news.user_interaction === "disliked"}
+										on:click|preventDefault|stopPropagation={() => handleDislikeClick(news.id)}
+									>
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											width="20"
+											height="20"
+											viewBox="0 0 24 24"
+											fill="none"
+											stroke="currentColor"
+											stroke-width="2"
+											stroke-linecap="round"
+											stroke-linejoin="round"
+										>
+											<path
+												d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"
+											></path>
+										</svg>
+									</button>
+								</div>
+							</div>
 						</article>
 					</a>
 				{/each}
@@ -844,6 +915,10 @@
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
+	}
+
+	.trade-button-container {
+		min-width: 120px; /* Same as action-button min-width to prevent layout shift */
 	}
 
 	.action-button {
@@ -1255,6 +1330,12 @@
 	.action-icon:hover {
 		background: #2a2a2a;
 		color: #ffdd2d;
+		border-color: #ffdd2d;
+	}
+
+	.action-icon.active {
+		background: #ffdd2d;
+		color: #1a1a1a;
 		border-color: #ffdd2d;
 	}
 

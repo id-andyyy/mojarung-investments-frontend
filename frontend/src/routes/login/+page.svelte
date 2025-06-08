@@ -94,6 +94,9 @@
 				{/if}
 			</button>
 		</form>
+		<div class="register-link-container">
+			<a href="/register" class="register-link">Нет аккаунта? Зарегистрироваться</a>
+		</div>
 	</div>
 </main>
 
@@ -219,6 +222,23 @@
 
 	.submit-button:active {
 		transform: translateY(0);
+	}
+
+	.register-link-container {
+		text-align: center;
+		margin-top: 1.5rem;
+	}
+
+	.register-link {
+		color: #a0a0a0;
+		text-decoration: none;
+		font-size: 0.9rem;
+		transition: color 0.2s;
+	}
+
+	.register-link:hover {
+		color: #ffdd2d;
+		text-decoration: underline;
 	}
 
 	/* Responsive adjustments */
