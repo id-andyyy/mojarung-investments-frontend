@@ -84,7 +84,7 @@
 				params.append("filter", "true");
 			}
 
-			const url = `/api/news?${params.toString()}`;
+			const url = `/api/news/?${params.toString()}`;
 			console.log(`[News Page] Fetching from URL: ${url}`);
 
 			const response = await fetch(url, {
