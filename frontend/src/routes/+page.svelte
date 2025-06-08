@@ -16,6 +16,15 @@
 	let importantNews: any[] = [];
 	let isImportantNewsLoading = true;
 	let selectedTags: string[] = [];
+	let isTradeModalOpen = false;
+	let tradeDetails: {
+		action: "buy" | "sell";
+		quantity: number;
+		displayTicker: string;
+		tradeTicker: string;
+		actionText: string;
+	} | null = null;
+	let isTradeLoading = false;
 
 	$: availableTickers = Array.from(
 		new Set(newsItems.map(item => item.ticker).filter((t): t is string => !!t))
@@ -289,6 +298,97 @@
 			performInteraction(newsId, "like", null);
 		} else {
 			performInteraction(newsId, "dislike", "disliked");
+		}
+	}
+
+	async function initiateTrade(newsItem: any) {
+		if (!browser) return;
+
+		const { action, quantity, ticker: displayTicker } = newsItem.recommendation;
+		if (action === "hold") return;
+
+		isTradeLoading = true;
+
+		const token = localStorage.getItem("access_token");
+		if (!token) {
+			alert("Ошибка аутентификации. Пожалуйста, войдите снова.");
+			isTradeLoading = false;
+			return;
+		}
+
+		try {
+			// Fetch tradable shares to get the first one
+			const tradableResponse = await fetch(
+				"http://176.124.212.149:8000/api/invest/sandbox/tradable-shares",
+				{ headers: { Authorization: `Bearer ${token}` } }
+			);
+
+			if (!tradableResponse.ok) {
+				throw new Error("Не удалось получить список торгуемых акций.");
+			}
+
+			const tradableShares = await tradableResponse.json();
+			if (tradableShares.length === 0) {
+				alert("Нет доступных акций для торговли в данный момент.");
+				return;
+			}
+
+			const firstTradableTicker = tradableShares[0].ticker;
+
+			// Set details for the modal
+			tradeDetails = {
+				action,
+				quantity,
+				displayTicker: displayTicker,
+				tradeTicker: firstTradableTicker,
+				actionText: action === "buy" ? "покупку" : "продажу"
+			};
+			isTradeModalOpen = true; // Open the modal
+		} catch (e: any) {
+			alert(`Произошла ошибка: ${e.message}`);
+			console.error("Initiate trade error:", e);
+		} finally {
+			isTradeLoading = false;
+		}
+	}
+
+	async function confirmTrade() {
+		if (!tradeDetails) return;
+
+		isTradeLoading = true; // Show loading on the confirm button
+		const token = localStorage.getItem("access_token");
+
+		try {
+			// Place the order using details from the modal state
+			const orderResponse = await fetch("http://176.124.212.149:8000/api/invest/sandbox/orders", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: `Bearer ${token}`
+				},
+				body: JSON.stringify({
+					ticker: tradeDetails.tradeTicker,
+					quantity: tradeDetails.quantity,
+					direction: tradeDetails.action
+				})
+			});
+
+			const orderResult = await orderResponse.json();
+			if (!orderResponse.ok) {
+				throw new Error(orderResult.detail || "Не удалось совершить сделку.");
+			}
+
+			alert(
+				`Ордер на ${tradeDetails.actionText} ${tradeDetails.quantity} лот(ов) ${tradeDetails.displayTicker} успешно размещен!`
+			);
+			fetchBalance(); // Refresh balance
+		} catch (e: any) {
+			alert(`Произошла ошибка: ${e.message}`);
+			console.error("Trade confirmation error:", e);
+		} finally {
+			isTradeLoading = false;
+			isTradeModalOpen = false; // Close modal
+			tradeDetails = null; // Reset details
 		}
 	}
 
@@ -608,15 +708,19 @@
 							<div class="action-buttons">
 								<div class="trade-button-container">
 									{#if news.ticker && !news.recommendation.isLoading}
-										<button class="action-button"
-											>{#if news.recommendation.action === "buy"}
+										<button
+											class="action-button"
+											on:click|preventDefault|stopPropagation={() => initiateTrade(news)}
+											disabled={news.recommendation.action === "hold" || isTradeLoading}
+										>
+											{#if news.recommendation.action === "buy"}
 												Купить {news.recommendation.quantity} {news.recommendation.ticker}
 											{:else if news.recommendation.action === "sell"}
 												Продать {news.recommendation.quantity} {news.recommendation.ticker}
 											{:else}
 												Держать {news.ticker}
-											{/if}</button
-										>
+											{/if}
+										</button>
 									{/if}
 								</div>
 								<div class="news-actions">
@@ -672,6 +776,45 @@
 			{/if}
 		</section>
 	</div>
+
+	{#if isTradeModalOpen && tradeDetails}
+		<div class="modal-overlay" on:click={() => (isTradeModalOpen = false)}>
+			<div class="modal-content" on:click|stopPropagation>
+				<h3>Подтверждение операции</h3>
+				<p>
+					Вы уверены, что хотите подтвердить {tradeDetails.actionText}
+					<strong>{tradeDetails.quantity} лот(ов)</strong> акции
+					<strong>{tradeDetails.displayTicker}</strong>?
+				</p>
+				<div class="modal-balance">
+					<span>Текущий баланс:</span>
+					<span class="balance-value">
+						{#if userBalance}
+							{userBalance.balance.toLocaleString("ru-RU")} {userBalance.currency.toUpperCase()}
+						{:else}
+							Загрузка...
+						{/if}
+					</span>
+				</div>
+				<div class="modal-actions">
+					<button
+						class="modal-button cancel"
+						on:click={() => (isTradeModalOpen = false)}
+						disabled={isTradeLoading}
+					>
+						Отмена
+					</button>
+					<button class="modal-button confirm" on:click={confirmTrade} disabled={isTradeLoading}>
+						{#if isTradeLoading}
+							Обработка...
+						{:else}
+							Подтвердить
+						{/if}
+					</button>
+				</div>
+			</div>
+		</div>
+	{/if}
 </main>
 
 <style>
@@ -1017,6 +1160,10 @@
 	.action-button:hover {
 		opacity: 0.9;
 		transform: translateY(-2px);
+	}
+
+	.action-button.liked {
+		color: #4caf50;
 	}
 
 	.news-header {
@@ -1711,19 +1858,22 @@
 	}
 
 	.action-button {
-		background: none;
+		padding: 0.5rem 1rem;
 		border: none;
-		color: #a0a0a0;
+		border-radius: 10px;
+		font-weight: 600;
 		cursor: pointer;
-		display: flex;
-		align-items: center;
-		gap: 0.4rem;
-		font-size: 0.9rem;
-		transition: color 0.2s;
+		transition: all 0.2s;
+		width: auto;
+		min-width: 120px;
+		margin: 0;
+		background: #ffdd2d;
+		color: #1a1a1a;
 	}
 
 	.action-button:hover {
-		color: #ffffff;
+		opacity: 0.9;
+		transform: translateY(-2px);
 	}
 
 	.action-button.liked {
@@ -1902,5 +2052,97 @@
 			margin-top: 5px;
 			width: 100%;
 		} */
+	}
+
+	/* Modal Styles */
+	.modal-overlay {
+		position: fixed;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		background: rgba(0, 0, 0, 0.7);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		z-index: 1000;
+	}
+
+	.modal-content {
+		background: #242424;
+		padding: 2rem;
+		border-radius: 12px;
+		border: 1px solid #333;
+		width: 90%;
+		max-width: 500px;
+		text-align: center;
+	}
+
+	.modal-content h3 {
+		color: #ffdd2d;
+		margin-top: 0;
+		margin-bottom: 1rem;
+	}
+
+	.modal-content p {
+		color: #ffffff;
+		margin-bottom: 1.5rem;
+		line-height: 1.6;
+	}
+
+	.modal-balance {
+		margin-bottom: 2rem;
+		padding: 0.75rem;
+		background: #1a1a1a;
+		border-radius: 8px;
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+	}
+
+	.modal-balance span {
+		color: #a0a0a0;
+	}
+
+	.modal-balance .balance-value {
+		color: #ffdd2d;
+		font-weight: 600;
+	}
+
+	.modal-actions {
+		display: flex;
+		justify-content: center;
+		gap: 1rem;
+	}
+
+	.modal-button {
+		padding: 0.7rem 1.5rem;
+		border: none;
+		border-radius: 8px;
+		font-weight: 600;
+		cursor: pointer;
+		transition: all 0.2s;
+		font-size: 0.95rem;
+	}
+
+	.modal-button.cancel {
+		background: #333;
+		color: #ffffff;
+	}
+	.modal-button.cancel:hover {
+		background: #444;
+	}
+
+	.modal-button.confirm {
+		background: #ffdd2d;
+		color: #1a1a1a;
+	}
+	.modal-button.confirm:hover {
+		opacity: 0.9;
+	}
+
+	.modal-button:disabled {
+		opacity: 0.6;
+		cursor: not-allowed;
 	}
 </style>
