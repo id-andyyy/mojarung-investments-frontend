@@ -85,7 +85,7 @@
 
 		console.log(`[Rec Fetch] Starting recommendation fetch for news ID: ${newsItem.id}`);
 		try {
-			const url = `/api/assistant/recommendations/news/${newsItem.id}`;
+			const url = `http://176.124.212.149:8000/api/assistant/recommendations/news/${newsItem.id}`;
 			console.log(`[Rec Fetch] Fetching from URL: ${url} using POST`);
 			const recResponse = await fetch(url, {
 				method: "POST",
@@ -147,7 +147,7 @@
 				params.append("filter", "true");
 			}
 
-			const url = `/api/news/?${params.toString()}`;
+			const url = `http://176.124.212.149:8000/api/news/?${params.toString()}`;
 			console.log(`[News Page] Fetching from URL: ${url}`);
 
 			const response = await fetch(url, {
@@ -377,7 +377,9 @@
 							<div class="news-header">
 								<div class="news-meta">
 									<div class="news-tags">
-										<span class="news-tag">{news.ticker}</span>
+										{#if news.ticker}
+											<span class="news-tag">{news.ticker}</span>
+										{/if}
 										{#if news.tags && news.tags.length > 0}
 											{#each news.tags as tag}
 												<span class="news-tag">{tag}</span>
@@ -388,7 +390,9 @@
 								<div class="news-right">
 									<div class="source-time-sentiment">
 										<span class="source">{news.source}</span>
-										<span class="time">{new Date(news.timestamp).toLocaleTimeString()}</span>
+										{#if news.timestamp}
+											<span class="time">{new Date(news.timestamp).toLocaleTimeString()}</span>
+										{/if}
 										<span
 											class="sentiment"
 											class:positive={news.sentiment === "positive"}
