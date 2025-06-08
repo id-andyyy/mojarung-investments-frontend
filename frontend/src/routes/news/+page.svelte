@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import Chart from 'chart.js/auto'; // Импортируем Chart.js
+  // import Chart from 'chart.js/auto'; // Импортируем Chart.js
 
   // Моковые данные для демонстрации (скопировано из +page.svelte для согласованности)
   const mockNews = [
@@ -127,7 +127,7 @@
     alert(`${action} ${ticker}`);
   }
 
-  let chartInstance: Chart | null = null;
+  // let chartInstance: Chart | null = null;
 
   // Add chat message interface
   interface ChatMessage {
@@ -160,16 +160,16 @@
   }
 
   onMount(() => {
-    // Проверяем, что newsItem.chartData существует и содержит данные
+    // Chart.js initialization code commented out
+    /*
     if (newsItem && newsItem.chartData && newsItem.chartData.length > 0) {
       const ctx = document.getElementById('stockChartCanvas') as HTMLCanvasElement;
       if (ctx) {
-        // Деструктурируем данные для Chart.js
         const labels = newsItem.chartData.map((d: { date: string; }) => new Date(d.date).toLocaleDateString('ru-RU', { month: 'short', day: 'numeric' }));
         const values = newsItem.chartData.map((d: { value: any; }) => d.value);
 
         if (chartInstance) {
-          chartInstance.destroy(); // Уничтожаем предыдущий экземпляр графика, если он есть
+          chartInstance.destroy();
         }
 
         chartInstance = new Chart(ctx, {
@@ -196,24 +196,24 @@
             maintainAspectRatio: false,
             plugins: {
               legend: {
-                display: false // Скрываем легенду
+                display: false
               }
             },
             scales: {
               x: {
                 grid: {
-                  color: '#333' // Цвет сетки X-оси
+                  color: '#333'
                 },
                 ticks: {
-                  color: '#a0a0a0' // Цвет меток X-оси
+                  color: '#a0a0a0'
                 }
               },
               y: {
                 grid: {
-                  color: '#333' // Цвет сетки Y-оси
+                  color: '#333'
                 },
                 ticks: {
-                  color: '#a0a0a0' // Цвет меток Y-оси
+                  color: '#a0a0a0'
                 }
               }
             }
@@ -223,12 +223,8 @@
     } else {
       console.warn("Отсутствуют данные chartData для отрисовки графика.");
     }
+    */
   });
-
-  // Обновляем график при изменении newsItem (если это требуется для динамической загрузки)
-  // $: if (newsItem) {
-  //   // Код для обновления графика здесь
-  // }
 </script>
 
 <main class="news-detail-container">
@@ -349,7 +345,10 @@
 
         <div class="chart-placeholder">
           <h3>График</h3>
-          <canvas id="stockChartCanvas"></canvas>
+          <div class="chart-stub">
+            <p>График временно недоступен</p>
+            <p class="chart-stub-subtitle">Здесь будет отображаться график динамики цены акций</p>
+          </div>
         </div>
       </div>
     </article>
@@ -714,25 +713,26 @@
     color: #a0a0a0;
   }
 
-  .chart-placeholder h3 {
-    color: #ffdd2d;
-    margin-bottom: 1rem; /* Adjust as needed */
-  }
-
-  .stock-chart {
+  .chart-stub {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 250px;
     width: 100%;
-    height: 100%;
-    overflow: visible; /* Allow labels to extend outside viewBox */
+    background: rgba(255, 221, 45, 0.05);
+    border-radius: 8px;
+    border: 1px dashed #ffdd2d;
   }
 
-  .stock-chart line {
-    stroke: #555; /* Lighter color for grid lines */
-    stroke-width: 1;
+  .chart-stub p {
+    margin: 0.5rem 0;
+    color: #ffdd2d;
   }
 
-  .stock-chart text {
-    fill: #a0a0a0;
-    font-size: 0.7rem;
+  .chart-stub-subtitle {
+    font-size: 0.9rem;
+    color: #a0a0a0 !important;
   }
 
   .full-text {
