@@ -64,4 +64,4 @@ export const api = {
     
     delete: <T>(endpoint: string, options?: FetchOptions) =>
         fetchApi<T>(endpoint, { ...options, method: 'DELETE' }),
-}; 
+};

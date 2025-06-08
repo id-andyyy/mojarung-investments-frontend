@@ -1,10 +1,6 @@
 <script lang="ts">
   let login = '';
-  let email = '';
   let password = '';
-  let confirmPassword = '';
-  let investToken = '';
-  let telegramId = '';
   let error: string | null = null;
   let success: string | null = null;
 
@@ -12,50 +8,46 @@
     error = null;
     success = null;
 
-    if (password !== confirmPassword) {
-      error = 'Пароли не совпадают.';
-      return;
-    }
-
     try {
-      const response = await fetch('http://176.124.212.149:8000/api/auth/register', {
+      const response = await fetch('http://176.124.212.149:8000/api/auth/login', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/x-www-form-urlencoded',
         },
-        body: JSON.stringify({
-          email,
+        body: new URLSearchParams({
           username: login,
-          password,
-          invest_token: investToken || null,
-          telegram_id: telegramId || null
-        })
+          password: password,
+        }).toString(),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        error = errorData.detail?.[0]?.msg || 'Ошибка при регистрации';
+        error = errorData.detail?.[0]?.msg || 'Ошибка при входе';
         return;
       }
 
-      success = 'Регистрация успешна!';
-      // Очищаем форму после успешной регистрации
+      const data = await response.json();
+      // Сохраняем токен и тип токена в куках
+      const expires = new Date(Date.now() + 86400 * 1000).toUTCString(); // Кука будет действительна 1 день
+      document.cookie = `access_token=${data.access_token}; expires=${expires}; path=/; HttpOnly=false; Secure=false`; // HttpOnly и Secure могут быть изменены в зависимости от настроек бэкенда и https
+      document.cookie = `token_type=${data.token_type}; expires=${expires}; path=/; HttpOnly=false; Secure=false`;
+      
+      success = 'Вход выполнен успешно!';
+      // Очищаем форму
       login = '';
-      email = '';
       password = '';
-      confirmPassword = '';
-      investToken = '';
-      telegramId = '';
+      // Можно перенаправить пользователя на другую страницу
+      // window.location.href = '/dashboard';
     } catch (err) {
       error = 'Ошибка при подключении к серверу';
-      console.error('Registration error:', err);
+      console.error('Login error:', err);
     }
   }
 </script>
 
-<main class="register-container">
-  <div class="register-card">
-    <h1 class="register-title">Регистрация</h1>
+<main class="login-container">
+  <div class="login-card">
+    <h1 class="login-title">Вход</h1>
     <form on:submit|preventDefault={handleSubmit}>
       <div class="form-group">
         <label for="login">Логин</label>
@@ -63,28 +55,8 @@
       </div>
 
       <div class="form-group">
-        <label for="email">Электронная почта</label>
-        <input type="email" id="email" bind:value={email} required />
-      </div>
-
-      <div class="form-group">
         <label for="password">Пароль</label>
-        <input type="password" id="password" bind:value={password} required minlength="8" />
-      </div>
-
-      <div class="form-group">
-        <label for="confirmPassword">Подтверждение пароля</label>
-        <input type="password" id="confirmPassword" bind:value={confirmPassword} required minlength="8" />
-      </div>
-
-      <div class="form-group">
-        <label for="investToken">Токен инвестиций (опционально)</label>
-        <input type="text" id="investToken" bind:value={investToken} />
-      </div>
-
-      <div class="form-group">
-        <label for="telegramId">Telegram ID (опционально)</label>
-        <input type="text" id="telegramId" bind:value={telegramId} />
+        <input type="password" id="password" bind:value={password} required />
       </div>
 
       {#if error}
@@ -95,7 +67,7 @@
         <p class="success-message">{success}</p>
       {/if}
 
-      <button type="submit" class="submit-button">Зарегистрироваться</button>
+      <button type="submit" class="submit-button">Войти</button>
     </form>
   </div>
 </main>
@@ -109,7 +81,7 @@
     font-family: 'Inter', sans-serif; /* Consistent font */
   }
 
-  .register-container {
+  .login-container {
     display: flex;
     justify-content: center;
     align-items: center;
@@ -118,7 +90,7 @@
     padding: 2rem;
   }
 
-  .register-card {
+  .login-card {
     background: #242424; /* Darker card background */
     padding: 0.9rem;
     border-radius: 12px;
@@ -128,7 +100,7 @@
     max-width: 450px;
   }
 
-  .register-title {
+  .login-title {
     color: #ffdd2d; /* TBank yellow accent color */
     font-size: 2rem;
     margin-bottom: 0.5rem;
@@ -221,11 +193,11 @@
 
   /* Responsive adjustments */
   @media (max-width: 600px) {
-    .register-card {
+    .login-card {
       padding: 0.6rem;
     }
 
-    .register-title {
+    .login-title {
       font-size: 1.75rem;
     }
   }
