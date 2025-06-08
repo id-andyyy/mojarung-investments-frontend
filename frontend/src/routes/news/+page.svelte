@@ -767,10 +767,12 @@
     padding: 0;
     border: none;
     background: none;
+    filter: drop-shadow(0 0 8px rgba(255, 221, 45, 0.4));
   }
 
   .chat-bot-button:hover {
     transform: scale(1.1);
+    filter: drop-shadow(0 0 12px rgba(255, 221, 45, 0.8));
   }
 
   .chat-bot-icon {
