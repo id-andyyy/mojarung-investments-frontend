@@ -9,6 +9,7 @@
 	let error: string | null = null;
 	let showBalance = true;
 	let feedMode: "recommendations" | "all" = "recommendations";
+	let isLoggedIn = false;
 
 	// Важные новости за день
 	const importantNews = [
@@ -69,6 +70,68 @@
 		importantNews[6] ? importantNews[6] : { title: "Нет важных новостей", tags: [], ticker: "" }
 	];
 
+	async function fetchAndApplyRecommendation(newsItem: any) {
+		// Only fetch recommendation if a ticker exists
+		if (!newsItem.ticker || newsItem.ticker.trim() === "") {
+			const itemToUpdate = newsItems.find(item => item.id === newsItem.id);
+			if (itemToUpdate) {
+				itemToUpdate.recommendation.isLoading = false;
+				itemToUpdate.recommendation.reasoning =
+					"Рекомендации для новостей без тикера не предоставляются.";
+				newsItems = [...newsItems];
+			}
+			return;
+		}
+
+		console.log(`[Rec Fetch] Starting recommendation fetch for news ID: ${newsItem.id}`);
+		try {
+			const url = `/api/assistant/recommendations/news/${newsItem.id}`;
+			console.log(`[Rec Fetch] Fetching from URL: ${url} using POST`);
+			const recResponse = await fetch(url, {
+				method: "POST",
+				credentials: "include"
+			});
+
+			console.log(`[Rec Fetch] Response status for news ID ${newsItem.id}: ${recResponse.status}`);
+
+			if (!recResponse.ok) {
+				const errorText = await recResponse.text();
+				console.error(`[Rec Fetch] Bad response for news ${newsItem.id}:`, errorText);
+				throw new Error(`Failed with status ${recResponse.status}`);
+			}
+
+			const recJson = await recResponse.json();
+			const itemToUpdate = newsItems.find(item => item.id === newsItem.id);
+
+			if (itemToUpdate) {
+				let action = "hold";
+				if (recJson.buy) action = "buy";
+				else if (recJson.sell) action = "sell";
+
+				itemToUpdate.recommendation = {
+					isLoading: false,
+					action: action,
+					confidence: recJson.confidence,
+					reasoning: recJson.reasoning,
+					ticker: recJson.ticker,
+					quantity: recJson.quantity
+				};
+				newsItems = [...newsItems]; // Trigger Svelte reactivity
+			}
+		} catch (recError) {
+			console.error(`[Rec Fetch] CATCH block for news ${newsItem.id}. Error:`, recError);
+			const itemToUpdate = newsItems.find(item => item.id === newsItem.id);
+			if (itemToUpdate) {
+				itemToUpdate.recommendation = {
+					...itemToUpdate.recommendation,
+					isLoading: false,
+					reasoning: "Не удалось загрузить рекомендацию."
+				};
+				newsItems = [...newsItems]; // Trigger Svelte reactivity
+			}
+		}
+	}
+
 	async function fetchNews(mode: "recommendations" | "all") {
 		if (!browser) return;
 
@@ -97,9 +160,11 @@
 				error = "Для доступа к новостям необходимо авторизоваться.";
 				isLoading = false;
 				newsItems = [];
+				isLoggedIn = false;
 				console.error("[News Page] Received 401 Unauthorized. User needs to log in.");
 				return;
 			}
+			isLoggedIn = true;
 
 			if (!response.ok) {
 				const errorData = await response
@@ -112,6 +177,7 @@
 			const data = await response.json();
 			console.log(`[News Page] Successfully fetched ${data.length} news items.`);
 
+			// 1. Map news and set a loading state for recommendations
 			newsItems = data.map((item: any) => ({
 				id: item.id,
 				title: item.title,
@@ -119,20 +185,24 @@
 				keyPoints: item.summary
 					? item.summary.split(". ").filter((s: string) => s && s.length > 0)
 					: [],
-				ticker: item.tickers?.split(",")[0].trim() || "N/A",
+				ticker: item.tickers?.split(",")[0].trim() || null, // Set to null if no ticker
 				sentiment: item.is_positive ? "positive" : "negative",
 				source: "TBank News API",
 				timestamp: item.created_at,
 				recommendation: {
-					action: item.is_positive ? "buy" : "sell",
-					confidence: Math.floor(Math.random() * 21) + 70,
-					reasoning: item.is_positive
-						? "На основе анализа новостей ИИ рекомендует покупку."
-						: "На основе анализа новостей ИИ рекомендует продажу."
+					isLoading: !!(item.tickers && item.tickers.trim() !== ""), // Only load if ticker exists
+					action: "hold",
+					confidence: 0,
+					reasoning: "Загрузка рекомендации...",
+					ticker: item.tickers?.split(",")[0].trim() || null,
+					quantity: 0
 				},
 				tags: item.tags ? item.tags.split(",").map((t: string) => t.trim()) : [],
 				percentageChange: parseFloat((Math.random() * 2.5 * (item.is_positive ? 1 : -1)).toFixed(1))
 			}));
+
+			// 2. Asynchronously fetch recommendations for each item
+			newsItems.forEach(fetchAndApplyRecommendation);
 		} catch (e: any) {
 			error = e.message || "Произошла ошибка при запросе новостей.";
 			newsItems = [];
@@ -168,60 +238,66 @@
 				</a>
 			</div>
 			<div class="profile-section">
-				<div class="balance">
-					<span class="balance-label">Баланс:</span>
-					<span class="balance-amount">
-						{#if showBalance}
-							₽ 1,234,567
-						{:else}
-							<span class="balance-stars">***</span>
-						{/if}
-					</span>
-					<button
-						class="balance-eye"
-						on:click={() => (showBalance = !showBalance)}
-						aria-label="Показать/скрыть баланс"
-					>
-						{#if showBalance}
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								width="22"
-								height="22"
-								fill="none"
-								viewBox="0 0 24 24"
-								stroke="currentColor"
-								><path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M1.5 12s3.5-7 10.5-7 10.5 7 10.5 7-3.5 7-10.5 7S1.5 12 1.5 12z"
-								/><circle cx="12" cy="12" r="3.5" /></svg
-							>
-						{:else}
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								width="22"
-								height="22"
-								fill="none"
-								viewBox="0 0 24 24"
-								stroke="currentColor"
-								><path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M17.94 17.94A10.06 10.06 0 0112 19.5c-7 0-10.5-7.5-10.5-7.5a20.3 20.3 0 014.21-5.3M6.06 6.06A10.06 10.06 0 0112 4.5c7 0 10.5 7.5 10.5 7.5a20.3 20.3 0 01-4.21 5.3M1 1l22 22"
-								/></svg
-							>
-						{/if}
-					</button>
-				</div>
-				<a href="/profile" class="profile-button">
-					<img
-						src="https://avatars.mds.yandex.net/i?id=dfb57f6793d9a8a2575c240be885d79e_l-4538910-images-thumbs&n=13"
-						alt="Profile"
-						class="profile-icon"
-					/>
-				</a>
+				{#if isLoggedIn}
+					<div class="balance">
+						<span class="balance-label">Баланс:</span>
+						<span class="balance-amount">
+							{#if showBalance}
+								₽ 1,234,567
+							{:else}
+								<span class="balance-stars">***</span>
+							{/if}
+						</span>
+						<button
+							class="balance-eye"
+							on:click={() => (showBalance = !showBalance)}
+							aria-label="Показать/скрыть баланс"
+						>
+							{#if showBalance}
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									width="22"
+									height="22"
+									fill="none"
+									viewBox="0 0 24 24"
+									stroke="currentColor"
+									><path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M1.5 12s3.5-7 10.5-7 10.5 7 10.5 7-3.5 7-10.5 7S1.5 12 1.5 12z"
+									/><circle cx="12" cy="12" r="3.5" /></svg
+								>
+							{:else}
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									width="22"
+									height="22"
+									fill="none"
+									viewBox="0 0 24 24"
+									stroke="currentColor"
+									><path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M17.94 17.94A10.06 10.06 0 0112 19.5c-7 0-10.5-7.5-10.5-7.5a20.3 20.3 0 014.21-5.3M6.06 6.06A10.06 10.06 0 0112 4.5c7 0 10.5 7.5 10.5 7.5a20.3 20.3 0 01-4.21 5.3M1 1l22 22"
+									/></svg
+								>
+							{/if}
+						</button>
+					</div>
+				{/if}
+				{#if isLoggedIn}
+					<a href="/profile" class="profile-button">
+						<img
+							src="https://avatars.mds.yandex.net/i?id=dfb57f6793d9a8a2575c240be885d79e_l-4538910-images-thumbs&n=13"
+							alt="Profile"
+							class="profile-icon"
+						/>
+					</a>
+				{:else}
+					<a href="/login" class="login-header-button">Войти</a>
+				{/if}
 			</div>
 		</div>
 	</header>
@@ -344,73 +420,83 @@
 								</div>
 							</div>
 
-							<div class="recommendation">
-								<h4>Рекомендация ИИ</h4>
-								<div class="confidence-meter">
-									<div class="confidence-bar-center">
-										{#if news.recommendation.action === "buy"}
-											<div
-												class="confidence-bar right"
-												style="width: {news.recommendation.confidence / 2}%"
-											></div>
-										{:else if news.recommendation.action === "sell"}
-											<div
-												class="confidence-bar left"
-												style="width: {news.recommendation.confidence / 2}%"
-											></div>
-										{:else}
-											<div class="confidence-bar hold" style="width: 0%"></div>
-										{/if}
-									</div>
-								</div>
-								<span class="confidence-text">Уверенность: {news.recommendation.confidence}%</span>
-								<p class="reasoning">{news.recommendation.reasoning}</p>
-								<div class="action-buttons">
-									<button class="action-button"
-										>{news.recommendation.action === "buy"
-											? `Купить ${news.ticker}`
-											: news.recommendation.action === "sell"
-												? `Продать ${news.ticker}`
-												: `Держать ${news.ticker}`}</button
-									>
-									<div class="news-actions">
-										<button class="action-icon like">
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												width="20"
-												height="20"
-												viewBox="0 0 24 24"
-												fill="none"
-												stroke="currentColor"
-												stroke-width="2"
-												stroke-linecap="round"
-												stroke-linejoin="round"
+							{#if news.ticker}
+								<div class="recommendation">
+									<h4>Рекомендация ИИ</h4>
+									{#if news.recommendation.isLoading}
+										<div class="loading-recommendation">{news.recommendation.reasoning}</div>
+									{:else}
+										<div class="confidence-meter">
+											<div class="confidence-bar-center">
+												{#if news.recommendation.action === "buy"}
+													<div
+														class="confidence-bar right"
+														style="width: {news.recommendation.confidence / 2}%"
+													></div>
+												{:else if news.recommendation.action === "sell"}
+													<div
+														class="confidence-bar left"
+														style="width: {news.recommendation.confidence / 2}%"
+													></div>
+												{:else}
+													<div class="confidence-bar hold" style="width: 0%"></div>
+												{/if}
+											</div>
+										</div>
+										<span class="confidence-text"
+											>Уверенность: {news.recommendation.confidence}%</span
+										>
+										<p class="reasoning">{news.recommendation.reasoning}</p>
+										<div class="action-buttons">
+											<button class="action-button"
+												>{#if news.recommendation.action === "buy"}
+													Купить {news.recommendation.quantity} {news.recommendation.ticker}
+												{:else if news.recommendation.action === "sell"}
+													Продать {news.recommendation.quantity} {news.recommendation.ticker}
+												{:else}
+													Держать {news.ticker}
+												{/if}</button
 											>
-												<path
-													d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"
-												></path>
-											</svg>
-										</button>
-										<button class="action-icon dislike">
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												width="20"
-												height="20"
-												viewBox="0 0 24 24"
-												fill="none"
-												stroke="currentColor"
-												stroke-width="2"
-												stroke-linecap="round"
-												stroke-linejoin="round"
-											>
-												<path
-													d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"
-												></path>
-											</svg>
-										</button>
-									</div>
+											<div class="news-actions">
+												<button class="action-icon like">
+													<svg
+														xmlns="http://www.w3.org/2000/svg"
+														width="20"
+														height="20"
+														viewBox="0 0 24 24"
+														fill="none"
+														stroke="currentColor"
+														stroke-width="2"
+														stroke-linecap="round"
+														stroke-linejoin="round"
+													>
+														<path
+															d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"
+														></path>
+													</svg>
+												</button>
+												<button class="action-icon dislike">
+													<svg
+														xmlns="http://www.w3.org/2000/svg"
+														width="20"
+														height="20"
+														viewBox="0 0 24 24"
+														fill="none"
+														stroke="currentColor"
+														stroke-width="2"
+														stroke-linecap="round"
+														stroke-linejoin="round"
+													>
+														<path
+															d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"
+														></path>
+													</svg>
+												</button>
+											</div>
+										</div>
+									{/if}
 								</div>
-							</div>
+							{/if}
 						</article>
 					</a>
 				{/each}
@@ -868,6 +954,13 @@
 		border: 1px solid #ff3e00;
 	}
 
+	.loading-recommendation {
+		font-style: italic;
+		color: #a0a0a0;
+		padding: 1rem 0;
+		text-align: center;
+	}
+
 	.important-news-section {
 		margin-bottom: 2rem;
 	}
@@ -1201,5 +1294,20 @@
 	.header-title-link {
 		text-decoration: none;
 		color: inherit;
+	}
+
+	.login-header-button {
+		padding: 0.6rem 1.2rem;
+		border-radius: 10px;
+		background: #ffdd2d;
+		color: #1a1a1a;
+		cursor: pointer;
+		font-weight: 600;
+		transition: all 0.2s;
+		text-decoration: none;
+		font-size: 0.95rem;
+	}
+	.login-header-button:hover {
+		opacity: 0.9;
 	}
 </style>
