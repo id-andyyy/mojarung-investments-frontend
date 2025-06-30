@@ -1,133 +1,115 @@
-# VnedraidTBank_Frontend
+![Art](https://i.postimg.cc/90JCTgqr/art.png)
 
-Это фронтенд-приложение для проекта "Внедрай TBank", созданное с использованием SvelteKit. Приложение представляет собой ленту новостей для трейдеров, которая помогает принимать торговые решения.
+![GitHub Created At](https://img.shields.io/github/created-at/id-andyyy/mojarung-investments-frontend?style=flat&color=FFDD2F)
+![](https://tokei.rs/b1/github/id-andyyy/mojarung-investments-frontend?style=flat&category=code&color=black)
+![Top Language](https://img.shields.io/github/languages/top/id-andyyy/mojarung-investments-frontend?style=flat&color=white)
+![Vnedraid](https://img.shields.io/badge/hackathon-vnedraid-blue?color=FFDD2F)
 
-**Ключевые функции:**
+# Mojarung Investments Frontend&nbsp;&#128184;
 
--   **Новостная лента:** Отображение актуальных финансовых новостей с возможностью фильтрации по тикерам и тегам.
--   **Торговые рекомендации:** Для каждой новости, связанной с определенным активом, можно запросить рекомендацию от AI-ассистента (покупать, продавать, держать).
--   **Управление портфелем:** Отображение баланса пользователя и возможность совершать сделки прямо из интерфейса.
--   **Аутентификация:** Безопасный вход для доступа к персонализированным данным.
+Фронтенд-проект для инвестиционной платформы "Mojarung Investments". Создан в рамках хакатона [Внедрейд](https://vnedreid.orionsoft.ru/) (1&nbsp;место&nbsp;&#129351;). Backend часть размещена в репозитории [mojarung-investments-backend](https://github.com/id-andyyy/mojarung-investments-backend).
 
-## Оглавление
+## Функциональность
 
-- [Технологический стек](#технологический-стек)
-- [Начало работы](#начало-работы)
-  - [Предварительные требования](#предварительные-требования)
-  - [Установка](#установка)
-- [Доступные скрипты](#доступные-скрипты)
-- [Сборка для продакшена](#сборка-для-продакшена)
-  - [Локальная сборка](#локальная-сборка)
-  - [Сборка с использованием Docker](#сборка-с-использованием-docker)
-- [Развертывание](#развертывание)
-  - [Автоматическое развертывание](#автоматическое-развертывание)
-  - [Ручное развертывание](#ручное-развертывание)
-- [Структура проекта](#структура-проекта)
+Проект имеет следующую структуру страниц, определенную в директории `src/routes/`:
 
-## Технологический стек
+- &#127968;&nbsp;`/` - **Главная страница**: Основная страница приложения. Содержит список свежих новостей с возможностью купить акцию в один клик
+- &#128274;&nbsp;`/login` - **Страница входа**: Форма для аутентификации существующих пользователей
+- &#128075;&nbsp;`/register` - **Страница регистрации**: Форма для создания новой учетной записи
+- &#128240;&nbsp;`/news` - **Страница новостей**: Раздел для отображения новостей, связанных с инвестициями или рынком
+- &#128100;&nbsp;`/profile` - **Страница профиля**: Личный кабинет пользователя, где он может просматривать и управлять своими данными
 
--   [SvelteKit](https://kit.svelte.dev/) - Фреймворк для создания веб-приложений.
--   [Vite](https://vitejs.dev/) - Инструмент для сборки фронтенда.
--   [TypeScript](https://www.typescriptlang.org/) - Язык программирования, основанный на JavaScript.
--   [Sass](https://sass-lang.com/) - CSS-препроцессор.
--   [Docker](https://www.docker.com/) - Платформа для контейнеризации приложений.
 
-## Начало работы
+## &#128218;&nbsp;Технологии и инструменты
 
-### Предварительные требования
+![HTML5](https://img.shields.io/badge/html5-%23E34F26.svg?style=for-the-badge&logo=html5&logoColor=white)
+![CSS3](https://img.shields.io/badge/css3-%231572B6.svg?style=for-the-badge&logo=css3&logoColor=white)
+![SASS](https://img.shields.io/badge/SASS-hotpink.svg?style=for-the-badge&logo=SASS&logoColor=white)
+![JavaScript](https://img.shields.io/badge/javascript-%23323330.svg?style=for-the-badge&logo=javascript&logoColor=white&color=yellow)
+![TypeScript](https://img.shields.io/badge/typescript-%23007ACC.svg?style=for-the-badge&logo=typescript&logoColor=white)
+![Vite](https://img.shields.io/badge/vite-%23646CFF.svg?style=for-the-badge&logo=vite&logoColor=white)
+![Svelte](https://img.shields.io/badge/svelte-%23f1413d.svg?style=for-the-badge&logo=svelte&logoColor=white)
+![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)
 
-Убедитесь, что у вас установлены [Node.js](https://nodejs.org/) (версия 21+) и [npm](https://www.npmjs.com/).
+- **Фреймворк**: SvelteKit
+- **Язык программирования**: TypeScript
+- **Сборщик проекта**: Vite
+- **Стилизация**: Sass/SCSS
+- **Форматирование кода**: Prettier
+- **Основные библиотеки**:
+    - `sveltekit-superforms`: Для удобной работы с формами в SvelteKit
+    - `chart.js`: Для создания и отображения графиков и диаграмм
+- **Адаптер сборки**: `@sveltejs/adapter-node` используется для сборки приложения в виде standalone Node.js сервера
+- **Контейнеризация**: `Dockerfile` для упаковки приложения в Docker-контейнер
 
-### Установка
+## &#128161;&nbsp;Принятые технические решения
 
-1.  Клонируйте репозиторий:
+- **Строгая типизация**: Использование TypeScript повышает надежность кода и улучшает опыт разработки за счет статической проверки типов
+- **Contract-First подход к API**: Структура API определена в спецификации
+- **Серверный рендеринг (SSR)**: Благодаря `@sveltejs/adapter-node` приложение генерирует страницы на сервере, что положительно сказывается на SEO и скорости первой загрузки
+- **Развертывание в контейнере**: `Dockerfile` и скрипты `deploy.sh`/`upload.sh`
+
+
+## &#128640;&nbsp;Как запустить сервис
+
+1. Склонируйте репозиторий и перейдите в папку с проектом:
     ```bash
-    git clone <URL-репозитория>
-    cd VnedraidTBank_Frontend
+    git clone https://github.com/id-andyyy/mojarung-investments-frontend.git
+    cd mojarung-investments-frontend 
     ```
 
-2.  Установите зависимости:
+2. Установите зависимости:
     ```bash
     npm install
     ```
 
-## Доступные скрипты
-
-В проекте доступны следующие скрипты:
-
--   `npm run dev`: Запускает сервер для разработки с горячей перезагрузкой.
--   `npm run build`: Собирает приложение для продакшена.
--   `npm run preview`: Запускает локальный сервер для просмотра продакшен-сборки.
--   `npm run check`: Проверяет типы с помощью TypeScript.
--   `npm run lint`: Проверяет код на соответствие стилю Prettier.
--   `npm run format`: Форматирует код с помощью Prettier.
-
-## Сборка для продакшена
-
-### Локальная сборка
-
-Для создания продакшен-версии приложения выполните команду:
-
-```bash
-npm run build
-```
-
-Готовые файлы будут находиться в директории `build`.
-
-### Сборка с использованием Docker
-
-В проекте есть `Dockerfile` для создания Docker-образа приложения.
-
-1.  Соберите Docker-образ:
+3. Запустите сервер для разработки:
     ```bash
-    docker build -t tbank-frontend:latest .
+    npm run dev
     ```
 
-2.  Запустите контейнер:
-    ```bash
-    docker run -p 3000:3000 tbank-frontend:latest
-    ```
-    Приложение будет доступно по адресу `http://localhost:3000`.
+4. Перейдите на http://localhost:5173
 
-## Развертывание
-
-### Автоматическое развертывание
-
-Для развертывания на сервере можно использовать скрипт `deploy.sh`. Этот скрипт выполняет следующие действия:
-1.  Устанавливает Docker и Docker Compose.
-2.  Создает директорию `/var/www/tbank`.
-3.  Создает `docker-compose.yml` для запуска фронтенд-контейнера.
-4.  Создает скрипт `update.sh` для легкого обновления приложения.
-5.  (Опционально) Устанавливает и настраивает Nginx в качестве обратного прокси.
-6.  (Опционально) Устанавливает Certbot для настройки SSL.
-
-**Инструкция:**
-
-1.  Скопируйте ваш проект на сервер.
-2.  Сделайте скрипт исполняемым: `chmod +x deploy.sh`.
-3.  Запустите скрипт: `./deploy.sh`.
-4.  Следуйте инструкциям в конце вывода скрипта для настройки домена и SSL.
-5.  Для обновления приложения на сервере, загрузите новый Docker-образ и запустите `./update.sh`.
-
-### Ручное развертывание
-
-Вы также можете развернуть приложение вручную, следуя шагам, описанным в `deploy.sh`. Основная идея - запустить собранный Docker-образ `tbank-frontend:latest` на порту 3000 и настроить веб-сервер (например, Nginx) для проксирования запросов на этот порт.
-
-## Структура проекта
+## &#128221;&nbsp;Структура проекта
 
 ```
 .
-├── Dockerfile              # Конфигурация для сборки Docker-образа
-├── deploy.sh               # Скрипт для автоматического развертывания
-├── package.json            # Зависимости и скрипты проекта
-├── svelte.config.js        # Конфигурация SvelteKit
-├── tsconfig.json           # Конфигурация TypeScript
-├── vite.config.ts          # Конфигурация Vite
-├── src/                    # Исходный код приложения
-│   ├── app.d.ts            # Глобальные объявления типов
-│   ├── app.html            # Шаблон HTML-страницы
-│   ├── lib/                # Библиотеки и утилиты
-│   ├── routes/             # Роутинг и страницы приложения
-│   └── styles.css          # Глобальные стили
-└── static/                 # Статические файлы (изображения, шрифты)
+├── src/
+│   ├── lib/              # Библиотеки, компоненты и утилиты Svelte
+│   ├── routes/
+│   │   ├── login/        # Страница входа
+│   │   ├── news/         # Страница новостей
+│   │   ├── profile/      # Страница профиля пользователя
+│   │   └── register/     # Страница регистрации
+│   ├── app.html          # Шаблон HTML-страницы
+│   ├── openapi.json      # Спецификация API
+│   └── styles.css        # Глобальные стили
+├── static/               # Статические файлы (изображения, шрифты)
+├── .dockerignore         # Файлы, исключаемые из Docker-контейнера
+├── .gitignore            # Файлы, игнорируемые Git
+├── .prettierignore       # Файлы, исключаемые из форматирования Prettier
+├── .prettierrc           # Конфигурация Prettier для форматирования кода
+├── Dockerfile            # Инструкции для сборки Docker-образа
+├── deploy.sh             # Скрипт для развертывания проекта
+├── package.json          # Зависимости и скрипты проекта
+├── svelte.config.js      # Конфигурация SvelteKit
+├── tsconfig.json         # Конфигурация TypeScript
+├── upload.sh             # Скрипт для загрузки сборки на сервер
+└── vite.config.ts        # Конфигурация Vite
 ```
+
+## Обратная связь
+
+Буду признателен, если вы поставите звезду&nbsp;&#11088;. Если вы нашли баг или у вас есть предложения по улучшению, используйте раздел [Issues](https://github.com/id-andyyy/mojarung-investments-frontend/issues).
+
+## Команда
+
+Команда разработчиков [Mojarung](https://t.me/mojarung):
+
+- [Андрей Обрезков](https://github.com/id-andyyy) (Fullstack developer)
+- [Кирилл Вериялов](https://github.com/verikirill) (Backend developer)
+- [Ярослав Ролдугин](https://github.com/Felicuss) (Backend developer)
+- [Владислав Полицын](https://github.com/wasbyy) (Frontend developer)
+- [Роман Соловьёв](https://github.com/Fors1ksx) (Frontend developer)
+
+Read in [English&nbsp;&#127468;&#127463;](README-en.md)
